@@ -1,0 +1,1 @@
+from .load_pokemon_data import Command
