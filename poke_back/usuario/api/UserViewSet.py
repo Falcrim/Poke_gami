@@ -6,15 +6,87 @@ from usuario.models.User import User
 from usuario.models.Player import Player
 from usuario.models.Bag import Bag
 
-# Importación corregida para tokens
 from rest_framework.authtoken.models import Token
 
 
 class UserSerializer(serializers.ModelSerializer):
+    player_info = serializers.SerializerMethodField()
+    pokedex_stats = serializers.SerializerMethodField()
+    ranking_position = serializers.SerializerMethodField()
+    achievements = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'battles_won', 'battles_lost', 'pvp_rating')
+        fields = ('id', 'username', 'email', 'battles_won', 'battles_lost',
+                  'pvp_rating', 'date_joined', 'player_info', 'pokedex_stats', 'ranking_position', 'achievements')
         read_only_fields = ('battles_won', 'battles_lost', 'pvp_rating')
+
+    def get_player_info(self, obj):
+        try:
+            player = obj.player_profile
+            current_location = None
+            if player.current_location:
+                current_location = {
+                    'id': player.current_location.id,
+                    'name': player.current_location.name,
+                    'type': player.current_location.location_type
+                }
+
+            return {
+                'money': player.money,
+                'starter_chosen': player.starter_chosen,
+                'current_location': current_location,
+                'pokemon_count': player.pokemons.count(),
+                'team_count': player.pokemons.count()  # Por ahora es lo mismo, luego podemos diferenciar
+            }
+        except:
+            return None
+
+    def get_pokedex_stats(self, obj):
+        try:
+            from usuario.models.Pokedex import Pokedex
+            player = obj.player_profile
+            total_pokemon = 151  # Pokémon de Kanto
+
+            pokedex_entries = Pokedex.objects.filter(player=player)
+            seen_count = pokedex_entries.count()
+            caught_count = pokedex_entries.filter(state='caught').count()
+
+            return {
+                'total_pokemon': total_pokemon,
+                'seen': seen_count,
+                'caught': caught_count,
+                'completion_percentage': round((caught_count / total_pokemon) * 100, 2)
+            }
+        except:
+            return None
+
+    def get_ranking_position(self, obj):
+        try:
+            higher_rated = User.objects.filter(pvp_rating__gt=obj.pvp_rating).count()
+            return higher_rated + 1  # Posición (1-based)
+        except:
+            return None
+
+    def get_achievements(self, obj):
+        """Obtener logros del jugador"""
+        achievements = []
+        player = obj.player_profile
+
+        # Logro: Primer Pokémon
+        if player.starter_chosen:
+            achievements.append({'name': 'Entrenador Novato', 'description': 'Elegir Pokémon inicial'})
+
+        # Logro: Pokédex
+        pokedex_stats = self.get_pokedex_stats(obj)
+        if pokedex_stats and pokedex_stats['caught'] >= 10:
+            achievements.append({'name': 'Coleccionista', 'description': 'Capturar 10 Pokémon'})
+
+        # Logro: Batallas
+        if obj.battles_won >= 10:
+            achievements.append({'name': 'Veterano', 'description': 'Ganar 10 batallas'})
+
+        return achievements
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -99,3 +171,97 @@ class UserViewSet(viewsets.ModelViewSet):
         """Obtener perfil del usuario actual"""
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """Obtener perfil completo del usuario actual"""
+        user = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def ranking(self, request):
+        """Obtener ranking general de PVP"""
+        # Obtener top 50 jugadores por rating PVP
+        top_players = User.objects.all().order_by('-pvp_rating', 'username')[:50]
+
+        ranking_data = []
+        for position, user in enumerate(top_players, 1):
+            try:
+                player_info = user.player_profile
+                pokemon_count = player_info.pokemons.count()
+
+                # Obtener estadísticas de batallas
+                total_battles = user.battles_won + user.battles_lost
+                win_rate = round((user.battles_won / total_battles * 100), 2) if total_battles > 0 else 0
+
+                ranking_data.append({
+                    'position': position,
+                    'username': user.username,
+                    'pvp_rating': user.pvp_rating,
+                    'battles_won': user.battles_won,
+                    'battles_lost': user.battles_lost,
+                    'win_rate': win_rate,
+                    'total_battles': total_battles,
+                    'pokemon_count': pokemon_count,
+                    'starter_chosen': player_info.starter_chosen
+                })
+            except:
+                continue
+
+        return Response(ranking_data)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def my_ranking(self, request):
+        """Obtener información de ranking del usuario actual y competidores cercanos"""
+        user = request.user
+
+        # Obtener posición actual
+        higher_rated = User.objects.filter(pvp_rating__gt=user.pvp_rating).count()
+        user_position = higher_rated + 1
+
+        # Obtener competidores cercanos (2 arriba, el usuario, 2 abajo)
+        start_idx = max(0, user_position - 3)
+        end_idx = user_position + 2
+
+        all_players = User.objects.all().order_by('-pvp_rating', 'username')
+        nearby_players = all_players[start_idx:end_idx]
+
+        nearby_data = []
+        for position, player in enumerate(nearby_players, start_idx + 1):
+            try:
+                player_info = player.player_profile
+                total_battles = player.battles_won + player.battles_lost
+                win_rate = round((player.battles_won / total_battles * 100), 2) if total_battles > 0 else 0
+
+                nearby_data.append({
+                    'position': position,
+                    'username': player.username,
+                    'pvp_rating': player.pvp_rating,
+                    'battles_won': player.battles_won,
+                    'battles_lost': player.battles_lost,
+                    'win_rate': win_rate,
+                    'is_current_user': player.id == user.id
+                })
+            except:
+                continue
+
+        # Estadísticas del usuario actual
+        total_battles = user.battles_won + user.battles_lost
+        win_rate = round((user.battles_won / total_battles * 100), 2) if total_battles > 0 else 0
+
+        user_stats = {
+            'position': user_position,
+            'username': user.username,
+            'pvp_rating': user.pvp_rating,
+            'battles_won': user.battles_won,
+            'battles_lost': user.battles_lost,
+            'win_rate': win_rate,
+            'total_battles': total_battles,
+            'total_players': User.objects.count()
+        }
+
+        return Response({
+            'user_stats': user_stats,
+            'nearby_players': nearby_data
+        })
