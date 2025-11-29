@@ -12,13 +12,12 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def heal_team(self, request):
-        """Curar todos los Pokémon del equipo de combate"""
         player = request.user.player_profile
         team_pokemons = player.pokemons.filter(in_team=True)
 
         healed_count = 0
         for pokemon in team_pokemons:
-            pokemon.full_heal()
+            PlayerPokemon.objects.filter(pk=pokemon.pk).update(current_hp=pokemon.hp)
             healed_count += 1
 
         return Response({

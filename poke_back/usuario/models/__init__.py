@@ -3,3 +3,4 @@ from .Player import Player
 from .Bag import Bag
 from .Pokedex import Pokedex
 from .PlayerPokemon import PlayerPokemon
+from .Battle import Battle

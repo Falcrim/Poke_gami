@@ -124,6 +124,5 @@ class PlayerPokemon(models.Model):
         return True
 
     def full_heal(self):
-        """Cura completamente al Pokémon"""
         self.current_hp = self.hp
-        self.save()
+        PlayerPokemon.objects.filter(pk=self.pk).update(current_hp=self.hp)
