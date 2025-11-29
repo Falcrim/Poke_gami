@@ -9,10 +9,23 @@ from pokemon.models.Pokemon import Pokemon
 class PlayerSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     current_location_name = serializers.CharField(source='current_location.name', read_only=True)
+    current_location_type = serializers.CharField(source='current_location.location_type', read_only=True)
+    connected_locations = serializers.SerializerMethodField()
 
     class Meta:
         model = Player
-        fields = ('id', 'username', 'current_location', 'current_location_name', 'money', 'starter_chosen')
+        fields = ('id', 'username', 'current_location', 'current_location_name',
+                  'current_location_type', 'money', 'starter_chosen', 'connected_locations')
+
+    def get_connected_locations(self, obj):
+        if obj.current_location:
+            connected_locations = obj.current_location.connected_locations.all()
+            return [{
+                'id': loc.id,
+                'name': loc.name,
+                'type': loc.location_type
+            } for loc in connected_locations]
+        return []
 
 
 class PlayerViewSet(viewsets.ModelViewSet):
@@ -48,8 +61,8 @@ class PlayerViewSet(viewsets.ModelViewSet):
                 experience=0
             )
 
-            # Los stats se calculan automáticamente en el save()
-            # Solo aseguramos que current_hp esté lleno
+            # Calcular stats
+            player_pokemon.calculate_stats()
             player_pokemon.current_hp = player_pokemon.hp
             player_pokemon.save()
 
@@ -57,33 +70,34 @@ class PlayerViewSet(viewsets.ModelViewSet):
             initial_moves = PokemonMove.objects.filter(
                 pokemon=starter_pokemon,
                 level__lte=5
-            )[:2]  # Solo 2 movimientos iniciales para evitar problemas
+            )[:2]
 
             for pokemon_move in initial_moves:
                 player_pokemon.moves.add(pokemon_move.move)
 
-            # Marcar como elegido
+            # Marcar como elegido y establecer ubicación inicial
             player.starter_chosen = True
 
             # Establecer ubicación inicial (Pueblo Paleta)
             from pokemon.models.Location import Location
-            try:
-                starting_location = Location.objects.get(name='Pueblo Paleta')
-                player.current_location = starting_location
-            except Location.DoesNotExist:
-                # Si no existe, usar la primera ubicación
-                starting_location = Location.objects.first()
-                if starting_location:
-                    player.current_location = starting_location
-
+            starting_location = Location.objects.get(name='Pueblo Paleta')
+            player.current_location = starting_location
             player.save()
 
             # Registrar en la pokédex
-            Pokedex.objects.get_or_create(
+            Pokedex.objects.create(
                 player=player,
                 pokemon=starter_pokemon,
-                defaults={'state': 'caught'}
+                state='caught'
             )
+
+            # Obtener ubicaciones conectadas para la respuesta
+            connected_locations = starting_location.connected_locations.all()
+            connected_locations_data = [{
+                'id': loc.id,
+                'name': loc.name,
+                'type': loc.location_type
+            } for loc in connected_locations]
 
             return Response({
                 'message': f'Pokémon inicial {starter_pokemon.name} elegido y agregado a tu equipo!',
@@ -93,7 +107,13 @@ class PlayerViewSet(viewsets.ModelViewSet):
                     'level': player_pokemon.level,
                     'hp': player_pokemon.hp,
                     'current_hp': player_pokemon.current_hp
-                }
+                },
+                'current_location': {
+                    'id': starting_location.id,
+                    'name': starting_location.name,
+                    'type': starting_location.location_type
+                },
+                'connected_locations': connected_locations_data
             })
 
         except Pokemon.DoesNotExist:
@@ -110,17 +130,56 @@ class PlayerViewSet(viewsets.ModelViewSet):
             new_location = Location.objects.get(id=location_id)
             current_location = player.current_location
 
+            # Verificar que la nueva ubicación esté conectada a la actual
             if current_location and new_location not in current_location.connected_locations.all():
                 return Response({'error': 'Ubicación no accesible'}, status=400)
 
             player.current_location = new_location
             player.save()
 
+            # Obtener ubicaciones conectadas para la respuesta
+            connected_locations = new_location.connected_locations.all()
+            connected_locations_data = [{
+                'id': loc.id,
+                'name': loc.name,
+                'type': loc.location_type
+            } for loc in connected_locations]
+
             return Response({
                 'message': f'Viajaste a {new_location.name}',
-                'new_location': new_location.name,
-                'location_type': new_location.location_type
+                'current_location': {
+                    'id': new_location.id,
+                    'name': new_location.name,
+                    'type': new_location.location_type
+                },
+                'connected_locations': connected_locations_data
             })
 
         except Location.DoesNotExist:
             return Response({'error': 'Ubicación no encontrada'}, status=404)
+
+    @action(detail=False, methods=['get'])
+    def current_location(self, request):
+        player = self.get_queryset().first()
+
+        if not player.current_location:
+            return Response({'error': 'No estás en ninguna ubicación'}, status=404)
+
+        current_loc = player.current_location
+        connected_locations = current_loc.connected_locations.all()
+
+        connected_locations_data = [{
+            'id': loc.id,
+            'name': loc.name,
+            'type': loc.location_type
+        } for loc in connected_locations]
+
+        return Response({
+            'current_location': {
+                'id': current_loc.id,
+                'name': current_loc.name,
+                'type': current_loc.location_type
+            },
+            'connected_locations': connected_locations_data
+        })
+

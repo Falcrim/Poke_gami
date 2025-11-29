@@ -23,3 +23,12 @@ class WildPokemonEncounter(models.Model):
 
     def __str__(self):
         return f"{self.pokemon.name} en {self.location.name} (Lv.{self.min_level}-{self.max_level})"
+
+    def get_rarity_display(self):
+        rarity_display = {
+            'common': 'Común',
+            'uncommon': 'Poco Común',
+            'rare': 'Raro',
+            'very_rare': 'Muy Raro'
+        }
+        return rarity_display.get(self.rarity, self.rarity)

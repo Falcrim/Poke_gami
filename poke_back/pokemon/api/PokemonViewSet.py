@@ -1,4 +1,7 @@
 from rest_framework import viewsets, permissions, serializers
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
 from pokemon.models.Pokemon import Pokemon
 from pokemon.models.PokemonMove import PokemonMove
 
@@ -38,3 +41,55 @@ class PokemonViewSet(viewsets.ReadOnlyModelViewSet):
         if pokemon_type:
             queryset = queryset.filter(type1=pokemon_type) | queryset.filter(type2=pokemon_type)
         return queryset
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def starters(self, request):
+        """Obtener información de los Pokémon iniciales"""
+        starters = Pokemon.objects.filter(pokedex_id__in=[1, 4, 7])
+
+        starter_data = []
+        for starter in starters:
+            # Obtener movimientos iniciales (nivel <= 5)
+            initial_moves = PokemonMove.objects.filter(
+                pokemon=starter,
+                level__lte=5
+            )[:4]
+
+            moves_data = []
+            for move in initial_moves:
+                moves_data.append({
+                    'name': move.move.name,
+                    'type': move.move.type,
+                    'power': move.move.power,
+                    'accuracy': move.move.accuracy,
+                    'pp': move.move.pp,
+                    'damage_class': move.move.damage_class,
+                    'level_learned': move.level
+                })
+
+            # CORRECCIÓN: Buscar la evolución usando evolves_from
+            evolved_pokemon = Pokemon.objects.filter(evolves_from=starter).first()
+
+            starter_data.append({
+                'id': starter.id,
+                'pokedex_id': starter.pokedex_id,
+                'name': starter.name,
+                'types': [starter.type1, starter.type2] if starter.type2 else [starter.type1],
+                'sprite_front': starter.sprite_front,
+                'sprite_back': starter.sprite_back,
+                'base_stats': {
+                    'hp': starter.base_hp,
+                    'attack': starter.base_attack,
+                    'defense': starter.base_defense,
+                    'special_attack': starter.base_special_attack,
+                    'special_defense': starter.base_special_defense,
+                    'speed': starter.base_speed
+                },
+                'initial_moves': moves_data,
+                'evolution': {
+                    'evolves_to': evolved_pokemon.name if evolved_pokemon else None,
+                    'evolution_level': evolved_pokemon.evolution_level if evolved_pokemon else None
+                } if evolved_pokemon else None
+            })
+
+        return Response(starter_data)
