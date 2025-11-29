@@ -13,8 +13,12 @@ class PlayerPokemon(models.Model):
     current_hp = models.IntegerField(default=0)
     experience = models.IntegerField(default=0)
 
+    # Nuevo campo para equipo/reserva
+    in_team = models.BooleanField(default=True)  # True = en equipo, False = en reserva
+    order = models.IntegerField(default=0)  # NUEVO: Orden en el equipo (0-5)
     moves = models.ManyToManyField(Move, related_name='player_pokemons')
 
+    # Stats actuales
     hp = models.IntegerField(default=0)
     attack = models.IntegerField(default=0)
     defense = models.IntegerField(default=0)
@@ -30,6 +34,16 @@ class PlayerPokemon(models.Model):
             return f"{self.nickname} ({self.pokemon.name}) Lv.{self.level}"
         return f"{self.pokemon.name} Lv.{self.level}"
 
+    def clean(self):
+        # Validación: máximo 6 Pokémon en equipo
+        if self.in_team and self.player.pokemons.filter(in_team=True).count() >= 6:
+            if not self.pk:  # Solo para nuevos Pokémon
+                raise ValidationError('No puedes tener más de 6 Pokémon en el equipo')
+
+        # Validación: orden debe estar entre 0-5
+        if self.in_team and (self.order < 0 or self.order > 5):
+            raise ValidationError('El orden debe estar entre 0 y 5')
+
     def calculate_stats(self):
         """Calcula los stats sin llamar a save()"""
         self.hp = int((2 * self.pokemon.base_hp * self.level) / 100) + self.level + 10
@@ -40,12 +54,38 @@ class PlayerPokemon(models.Model):
         self.speed = int((2 * self.pokemon.base_speed * self.level) / 100) + 5
 
     def save(self, *args, **kwargs):
-        # Solo calcular stats si es un nuevo Pokémon o cambió el nivel
+        if self.in_team:
+            if not self.pk or self.order == 0:
+                max_order = PlayerPokemon.objects.filter(
+                    player=self.player,
+                    in_team=True
+                ).exclude(pk=self.pk).aggregate(models.Max('order'))['order__max'] or -1
+                self.order = max_order + 1
+
+            if self.order > 5:
+                self.order = 5
+        else:
+            self.order = 0
+
         if not self.pk or self.has_changed_level():
             self.calculate_stats()
             if not self.current_hp or self.current_hp > self.hp:
                 self.current_hp = self.hp
+
         super().save(*args, **kwargs)
+
+        if self.in_team:
+            self._reorder_team()
+
+    def _reorder_team(self):
+        team_pokemons = PlayerPokemon.objects.filter(
+            player=self.player,
+            in_team=True
+        ).order_by('order', 'id')
+
+        for new_order, pokemon in enumerate(team_pokemons):
+            if pokemon.order != new_order:
+                PlayerPokemon.objects.filter(pk=pokemon.pk).update(order=new_order)
 
     def has_changed_level(self):
         """Verifica si el nivel cambió"""
@@ -82,3 +122,8 @@ class PlayerPokemon(models.Model):
 
         self.moves.add(move)
         return True
+
+    def full_heal(self):
+        """Cura completamente al Pokémon"""
+        self.current_hp = self.hp
+        self.save()

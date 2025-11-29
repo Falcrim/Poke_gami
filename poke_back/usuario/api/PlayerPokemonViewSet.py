@@ -20,8 +20,7 @@ class PlayerPokemonSerializer(serializers.ModelSerializer):
         fields = ('id', 'pokemon', 'pokemon_name', 'pokemon_types', 'nickname', 'level',
                   'current_hp', 'hp', 'attack', 'defense', 'special_attack', 'special_defense',
                   'speed', 'experience', 'sprite_front', 'sprite_back', 'moves', 'moves_details',
-                  'available_moves')
-        read_only_fields = ('moves',)
+                  'available_moves', 'in_team', 'order')
 
     def get_pokemon_types(self, obj):
         types = [obj.pokemon.type1]
