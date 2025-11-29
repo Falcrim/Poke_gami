@@ -10,9 +10,21 @@ from pokemon.models.Move import Move
 class PokemonCenterViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
+    def _check_location(self, player):
+        if not player.current_location:
+            raise ValidationError('No estás en ninguna ubicación')
+        if player.current_location.location_type != 'town':
+            raise ValidationError('Solo puedes usar el Centro Pokémon en pueblos')
+
     @action(detail=False, methods=['post'])
     def heal_team(self, request):
         player = request.user.player_profile
+
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         team_pokemons = player.pokemons.filter(in_team=True)
 
         healed_count = 0
@@ -28,6 +40,11 @@ class PokemonCenterViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def get_team_and_reserve(self, request):
         player = request.user.player_profile
+
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
 
         team_pokemons = player.pokemons.filter(in_team=True).order_by('order')
         reserve_pokemons = player.pokemons.filter(in_team=False)
@@ -46,6 +63,13 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'], url_path='move-to-reserve')
     def move_to_reserve(self, request, pk=None):
+        player = request.user.player_profile
+
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         try:
             pokemon = PlayerPokemon.objects.get(pk=pk, player__user=request.user, in_team=True)
         except PlayerPokemon.DoesNotExist:
@@ -70,6 +94,13 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'], url_path='move-to-team')
     def move_to_team(self, request, pk=None):
+        player = request.user.player_profile
+
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         try:
             pokemon = PlayerPokemon.objects.get(pk=pk, player__user=request.user, in_team=False)
         except PlayerPokemon.DoesNotExist:
@@ -90,6 +121,13 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'], url_path='swap-with-team')
     def swap_with_team(self, request, pk=None):
+        player = request.user.player_profile
+
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         reserve_pokemon_id = pk
         team_pokemon_id = request.data.get('team_pokemon_id')
 
@@ -129,7 +167,13 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['get'])
     def available_moves(self, request, pk=None):
-        """Obtener movimientos disponibles para un Pokémon"""
+        player = request.user.player_profile
+
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         try:
             pokemon = PlayerPokemon.objects.get(pk=pk, player__user=request.user)
         except PlayerPokemon.DoesNotExist:
@@ -160,6 +204,14 @@ class PokemonCenterViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['post'], url_path='teach-move')
     def teach_move(self, request, pk=None):
         """Enseñar un nuevo movimiento al Pokémon"""
+        player = request.user.player_profile
+
+        # Verificar ubicación
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         try:
             pokemon = PlayerPokemon.objects.get(pk=pk, player__user=request.user)
         except PlayerPokemon.DoesNotExist:
@@ -186,6 +238,14 @@ class PokemonCenterViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['post'], url_path='forget-move')
     def forget_move(self, request, pk=None):
         """Olvidar un movimiento del Pokémon"""
+        player = request.user.player_profile
+
+        # Verificar ubicación
+        try:
+            self._check_location(player)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
+
         try:
             pokemon = PlayerPokemon.objects.get(pk=pk, player__user=request.user)
         except PlayerPokemon.DoesNotExist:
@@ -215,7 +275,6 @@ class PokemonCenterViewSet(viewsets.ViewSet):
             return Response({'error': 'Movimiento no encontrado'}, status=404)
 
     def _reorder_team(self, player):
-        """Reordenar el equipo para órdenes consecutivos"""
         team_pokemons = PlayerPokemon.objects.filter(
             player=player,
             in_team=True
