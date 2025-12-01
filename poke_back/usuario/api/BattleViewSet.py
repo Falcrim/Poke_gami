@@ -360,14 +360,12 @@ class BattleViewSet(viewsets.ViewSet):
         return effectiveness
 
     def wild_attack(self, battle):
-        """El Pokémon salvaje ataca"""
         available_moves = list(battle.wild_moves.all())
         if not available_moves:
-            return 0, Move.objects.first()  # Movimiento por defecto
+            return 0, Move.objects.first()
 
         wild_move = random.choice(available_moves)
 
-        # Calcular stats del Pokémon salvaje
         wild_attack = self.calculate_stat(battle.wild_pokemon.base_attack, battle.wild_level)
         wild_special_attack = self.calculate_stat(battle.wild_pokemon.base_special_attack, battle.wild_level)
 
@@ -488,8 +486,32 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def use_pokeball(self, battle, bag, ball_type):
-        """Intentar capturar al Pokémon salvaje usando fórmula de captura de Pokémon"""
-        # ... (código anterior sin cambios) ...
+        ball_rates = {
+            'pokeball': 1.0,
+            'ultra_ball': 2.0
+        }
+
+        # Verificar que hay pokéballs disponibles
+        if getattr(bag, f'{ball_type}s', 0) <= 0:
+            return Response({'error': f'No tienes {ball_type}s'}, status=400)
+
+        base_catch_rate = 255
+
+        hp_max = battle.wild_max_hp
+        hp_current = battle.wild_current_hp
+        hp_factor = (3 * hp_max - 2 * hp_current) * base_catch_rate / (3 * hp_max)
+
+        ball_modifier = ball_rates[ball_type]
+
+        status_modifier = 1.0  # Normal
+
+        catch_rate = (hp_factor * ball_modifier * status_modifier) / 255
+
+        min_catch_chance = 0.1
+        max_catch_chance = 0.9
+        catch_chance = max(min_catch_chance, min(max_catch_chance, catch_rate))
+
+        print(f"Captura: HP={hp_current}/{hp_max}, Ball={ball_type}, Chance={catch_chance:.2%}")
 
         with transaction.atomic():
             # Usar pokéball
@@ -685,8 +707,6 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def handle_capture(self, battle, ball_type):
-        """Manejar captura exitosa"""
-        # Crear nuevo Pokémon para el jugador
         new_pokemon = PlayerPokemon.objects.create(
             player=battle.player,
             pokemon=battle.wild_pokemon,
@@ -696,7 +716,6 @@ class BattleViewSet(viewsets.ViewSet):
         )
         new_pokemon.calculate_stats()
 
-        # ACTUALIZACIÓN: Usar update para evitar reordenamiento
         PlayerPokemon.objects.filter(pk=new_pokemon.pk).update(
             hp=new_pokemon.hp,
             current_hp=new_pokemon.hp,
@@ -707,7 +726,6 @@ class BattleViewSet(viewsets.ViewSet):
             speed=new_pokemon.speed
         )
 
-        # Aprender movimientos iniciales
         wild_moves = PokemonMove.objects.filter(
             pokemon=battle.wild_pokemon,
             level__lte=battle.wild_level
@@ -715,13 +733,14 @@ class BattleViewSet(viewsets.ViewSet):
         for move in wild_moves:
             new_pokemon.moves.add(move.move)
 
-        # Registrar en la Pokédex
         from usuario.models.Pokedex import Pokedex
-        Pokedex.objects.get_or_create(
+        pokedex_entry, created = Pokedex.objects.get_or_create(
             player=battle.player,
-            pokemon=battle.wild_pokemon,
-            defaults={'state': 'caught'}
+            pokemon=battle.wild_pokemon
         )
+        pokedex_entry.state = 'caught'
+        pokedex_entry.save()
+
 
         return Response({
             'message': f'¡Has capturado a {battle.wild_pokemon.name} con una {ball_type}!',

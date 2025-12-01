@@ -13,9 +13,8 @@ class PlayerPokemon(models.Model):
     current_hp = models.IntegerField(default=0)
     experience = models.IntegerField(default=0)
 
-    # Nuevo campo para equipo/reserva
-    in_team = models.BooleanField(default=True)  # True = en equipo, False = en reserva
-    order = models.IntegerField(default=0)  # NUEVO: Orden en el equipo (0-5)
+    in_team = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
     moves = models.ManyToManyField(Move, related_name='player_pokemons')
 
     # Stats actuales
@@ -38,7 +37,7 @@ class PlayerPokemon(models.Model):
 
     def clean(self):
         if self.in_team and self.player.pokemons.filter(in_team=True).count() >= 6:
-            if not self.pk:  # Solo para nuevos Pokémon
+            if not self.pk:
                 raise ValidationError('No puedes tener más de 6 Pokémon en el equipo')
 
         if self.in_team and (self.order < 0 or self.order > 5):
