@@ -210,10 +210,8 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'], url_path='teach-move')
     def teach_move(self, request, pk=None):
-        """Enseñar un nuevo movimiento al Pokémon"""
         player = request.user.player_profile
 
-        # Verificar ubicación
         try:
             self._check_location(player)
         except ValidationError as e:
@@ -244,10 +242,8 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'], url_path='forget-move')
     def forget_move(self, request, pk=None):
-        """Olvidar un movimiento del Pokémon"""
         player = request.user.player_profile
 
-        # Verificar ubicación
         try:
             self._check_location(player)
         except ValidationError as e:
@@ -264,14 +260,7 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
         try:
             move = Move.objects.get(id=move_id)
-
-            if not pokemon.moves.filter(id=move.id).exists():
-                return Response({'error': 'El Pokémon no conoce ese movimiento'}, status=400)
-
-            if pokemon.moves.count() <= 1:
-                return Response({'error': 'El Pokémon debe tener al menos 1 movimiento'}, status=400)
-
-            pokemon.moves.remove(move)
+            pokemon.forget_move(move)
 
             return Response({
                 'message': f'{pokemon.pokemon.name} olvidó {move.name}',
@@ -280,6 +269,8 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
         except Move.DoesNotExist:
             return Response({'error': 'Movimiento no encontrado'}, status=404)
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=400)
 
     def _reorder_team(self, player):
         team_pokemons = PlayerPokemon.objects.filter(

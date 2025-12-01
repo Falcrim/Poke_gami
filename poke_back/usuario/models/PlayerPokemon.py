@@ -141,20 +141,24 @@ class PlayerPokemon(models.Model):
             self.evolve(evolution)
 
     def evolve(self, new_pokemon):
-        """Evoluciona el Pokémon a una nueva especie"""
         old_pokemon_name = self.pokemon.name
         self.pokemon = new_pokemon
         self.just_evolved = True
 
-        # Recalcular stats con la nueva especie
         self.calculate_stats()
 
-        # Curar completamente al evolucionar
         self.current_hp = self.hp
 
-        # Mantener el nickname o usar el nombre de la nueva especie
         if not self.nickname or self.nickname == old_pokemon_name:
             self.nickname = None
+
+        if not self.moves_pp:
+            self.moves_pp = {}
+
+        for move in self.moves.all():
+            move_id_str = str(move.id)
+            if move_id_str not in self.moves_pp:
+                self.moves_pp[move_id_str] = move.pp
 
     def get_experience_info(self):
         """Obtiene información detallada sobre la experiencia para la barra de progreso"""
@@ -217,6 +221,17 @@ class PlayerPokemon(models.Model):
             if move_id_str not in self.moves_pp:
                 self.moves_pp[move_id_str] = move.pp
 
+        if self.pk:
+            current_move_ids = set(str(move.id) for move in self.moves.all())
+
+            keys_to_remove = []
+            for move_id_str in self.moves_pp.keys():
+                if move_id_str not in current_move_ids:
+                    keys_to_remove.append(move_id_str)
+
+            for key in keys_to_remove:
+                del self.moves_pp[key]
+
         if not self.just_evolved and self.pk:
             current_just_evolved = PlayerPokemon.objects.filter(pk=self.pk).values_list('just_evolved',
                                                                                         flat=True).first()
@@ -272,6 +287,39 @@ class PlayerPokemon(models.Model):
             raise ValidationError(f"{self.pokemon.name} ya conoce {move.name}")
 
         self.moves.add(move)
+
+        # Actualizar moves_pp para el nuevo movimiento
+        if not self.moves_pp:
+            self.moves_pp = {}
+
+        self.moves_pp[str(move.id)] = move.pp
+        self.save(update_fields=['moves_pp'])
+
         return True
 
+    def forget_move(self, move):
+        """Olvida un movimiento"""
+        if not self.moves.filter(id=move.id).exists():
+            raise ValidationError(f"{self.pokemon.name} no conoce {move.name}")
 
+        if self.moves.count() <= 1:
+            raise ValidationError(f"{self.pokemon.name} debe tener al menos 1 movimiento")
+
+        self.moves.remove(move)
+
+        # Eliminar de moves_pp si existe
+        if self.moves_pp and str(move.id) in self.moves_pp:
+            del self.moves_pp[str(move.id)]
+            self.save(update_fields=['moves_pp'])
+
+        return True
+
+    def replace_move(self, old_move, new_move):
+        """Reemplaza un movimiento por otro"""
+        # Olvidar el movimiento viejo
+        self.forget_move(old_move)
+
+        # Aprender el movimiento nuevo
+        self.teach_move(new_move)
+
+        return True
