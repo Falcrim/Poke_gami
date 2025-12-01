@@ -1,0 +1,249 @@
+.profile {
+  padding: 2rem;
+  min-height: calc(100vh - 80px);
+}
+
+.profile-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.profile-header {
+  background: rgba(44, 62, 80, 0.9);
+  padding: 2rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  text-align: center;
+  border: 3px solid #f1c40f;
+  backdrop-filter: blur(10px);
+}
+
+.profile-header h1 {
+  color: #f1c40f;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-size: 2.5rem;
+}
+
+.profile-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.profile-section {
+  background: rgba(44, 62, 80, 0.9);
+  padding: 2rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  border: 2px solid #34495e;
+  backdrop-filter: blur(10px);
+}
+
+.profile-section h2 {
+  color: #3498db;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #34495e;
+  padding-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(52, 73, 94, 0.6);
+  border-radius: 8px;
+}
+
+.info-item label {
+  color: #bdc3c7;
+  font-weight: 500;
+}
+
+.info-item span {
+  color: #ecf0f1;
+  font-weight: 600;
+}
+
+.info-item .money {
+  color: #f1c40f;
+  font-weight: bold;
+}
+
+.info-item .ranking-pos {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  background: rgba(52, 73, 94, 0.6);
+  padding: 1.5rem;
+  border-radius: 10px;
+  text-align: center;
+  border: 2px solid #34495e;
+  transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-3px);
+}
+
+.stat-item label {
+  display: block;
+  color: #bdc3c7;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: block;
+}
+
+.stat-value.win {
+  color: #27ae60;
+}
+
+.stat-value.lose {
+  color: #e74c3c;
+}
+
+.stat-value.rating {
+  color: #f1c40f;
+}
+
+.pokedex-progress {
+  background: rgba(52, 73, 94, 0.6);
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 2px solid #34495e;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  color: #ecf0f1;
+  font-weight: 600;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background: #34495e;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  transition: width 0.5s ease;
+  border-radius: 10px;
+}
+
+.progress-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.progress-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background: rgba(44, 62, 80, 0.8);
+  border-radius: 5px;
+}
+
+.progress-item .label {
+  color: #bdc3c7;
+}
+
+.progress-item .value {
+  color: #ecf0f1;
+  font-weight: bold;
+}
+
+.player-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.achievement-card {
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+  padding: 1.5rem;
+  border-radius: 10px;
+  border: 2px solid #f1c40f;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.achievement-card:hover {
+  transform: translateY(-5px);
+}
+
+.achievement-card h3 {
+  color: #f1c40f;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.achievement-card p {
+  color: #bdc3c7;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  font-size: 1.5rem;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .profile {
+    padding: 1rem;
+  }
+  
+  .info-grid,
+  .stats-grid,
+  .player-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .achievements-grid {
+    grid-template-columns: 1fr;
+  }
+}
