@@ -14,13 +14,17 @@ class PlayerPokemonSerializer(serializers.ModelSerializer):
     sprite_back = serializers.URLField(source='pokemon.sprite_back', read_only=True)
     moves_details = serializers.SerializerMethodField()
     available_moves = serializers.SerializerMethodField()
+    experience_info = serializers.SerializerMethodField()
 
     class Meta:
         model = PlayerPokemon
         fields = ('id', 'pokemon', 'pokemon_name', 'pokemon_types', 'nickname', 'level',
                   'current_hp', 'hp', 'attack', 'defense', 'special_attack', 'special_defense',
                   'speed', 'experience', 'sprite_front', 'sprite_back', 'moves', 'moves_details',
-                  'available_moves', 'in_team', 'order')
+                  'available_moves', 'in_team', 'order', 'experience_info')
+
+    def get_experience_info(self, obj):
+        return obj.get_experience_info()
 
     def get_pokemon_types(self, obj):
         types = [obj.pokemon.type1]

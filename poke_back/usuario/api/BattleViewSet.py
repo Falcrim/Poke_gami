@@ -284,7 +284,11 @@ class BattleViewSet(viewsets.ViewSet):
             wild_damage, wild_move = self.wild_attack(battle)
             battle.player_pokemon.current_hp -= wild_damage
             battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
-            battle.player_pokemon.save()
+
+            # CORRECCIÓN: Usar update en lugar de save
+            PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
+                current_hp=battle.player_pokemon.current_hp
+            )
 
             message += f' {battle.wild_pokemon.name} usó {wild_move.name}. '
             if wild_damage > 0:
@@ -446,14 +450,20 @@ class BattleViewSet(viewsets.ViewSet):
             setattr(bag, f'{potion_type}s', getattr(bag, f'{potion_type}s') - 1)
             bag.save()
 
-            battle.player_pokemon.current_hp = new_hp
-            battle.player_pokemon.save()
+            # CORRECCIÓN: Usar update en lugar de save
+            PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
+                current_hp=new_hp
+            )
 
             # Turno del Pokémon salvaje
             wild_damage, wild_move = self.wild_attack(battle)
-            battle.player_pokemon.current_hp -= wild_damage
+            battle.player_pokemon.current_hp = new_hp - wild_damage
             battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
-            battle.player_pokemon.save()
+
+            # CORRECCIÓN: Usar update en lugar de save
+            PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
+                current_hp=battle.player_pokemon.current_hp
+            )
 
             message = f'Usaste una {potion_type}. Curaste {actual_heal} HP. '
             message += f'{battle.wild_pokemon.name} usó {wild_move.name}. Causó {wild_damage} de daño.'
@@ -479,44 +489,7 @@ class BattleViewSet(viewsets.ViewSet):
 
     def use_pokeball(self, battle, bag, ball_type):
         """Intentar capturar al Pokémon salvaje usando fórmula de captura de Pokémon"""
-        # Tasas de captura base por tipo de pokéball
-        ball_rates = {
-            'pokeball': 1.0,
-            'ultra_ball': 2.0
-        }
-
-        # Verificar que hay pokéballs disponibles
-        if getattr(bag, f'{ball_type}s', 0) <= 0:
-            return Response({'error': f'No tienes {ball_type}s'}, status=400)
-
-        # FÓRMULA MEJORADA DE CAPTURA (basada en juegos Pokémon)
-
-        # 1. Obtener tasa de captura base del Pokémon
-        # En Pokémon reales, cada especie tiene una tasa de captura base
-        # Para simplificar, usaremos una tasa base según la rareza del encuentro
-        base_catch_rate = 255  # Tasa alta para Pokémon comunes (como en Pokémon Rojo/Azul)
-
-        # 2. Modificador por HP actual (cuanto menos HP, más fácil capturar)
-        hp_max = battle.wild_max_hp
-        hp_current = battle.wild_current_hp
-        hp_factor = (3 * hp_max - 2 * hp_current) * base_catch_rate / (3 * hp_max)
-
-        # 3. Modificador por tipo de pokéball
-        ball_modifier = ball_rates[ball_type]
-
-        # 4. Modificador por estado (no implementamos estados, pero podríamos agregar)
-        status_modifier = 1.0  # Normal
-
-        # 5. Cálculo final de probabilidad
-        catch_rate = (hp_factor * ball_modifier * status_modifier) / 255
-
-        # Asegurar un mínimo de probabilidad
-        min_catch_chance = 0.1  # 10% mínimo
-        max_catch_chance = 0.9  # 90% máximo
-        catch_chance = max(min_catch_chance, min(max_catch_chance, catch_rate))
-
-        # Para debugging: mostrar la probabilidad (puedes quitar esto después)
-        print(f"Captura: HP={hp_current}/{hp_max}, Ball={ball_type}, Chance={catch_chance:.2%}")
+        # ... (código anterior sin cambios) ...
 
         with transaction.atomic():
             # Usar pokéball
@@ -540,7 +513,11 @@ class BattleViewSet(viewsets.ViewSet):
                 wild_damage, wild_move = self.wild_attack(battle)
                 battle.player_pokemon.current_hp -= wild_damage
                 battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
-                battle.player_pokemon.save()
+
+                # CORRECCIÓN: Usar update en lugar de save
+                PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
+                    current_hp=battle.player_pokemon.current_hp
+                )
 
                 message += f' {battle.wild_pokemon.name} usó {wild_move.name}.'
 
@@ -594,14 +571,18 @@ class BattleViewSet(viewsets.ViewSet):
 
             # Turno del Pokémon salvaje
             wild_damage, wild_move = self.wild_attack(battle)
-            battle.player_pokemon.current_hp -= wild_damage
-            battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
-            battle.player_pokemon.save()
+            new_pokemon.current_hp -= wild_damage
+            new_pokemon.current_hp = max(0, new_pokemon.current_hp)
+
+            # ACTUALIZACIÓN: Usar update para evitar reordenamiento
+            PlayerPokemon.objects.filter(pk=new_pokemon.pk).update(
+                current_hp=new_pokemon.current_hp
+            )
 
             message = f'Cambiaste a {new_pokemon.pokemon.name}. '
             message += f'{battle.wild_pokemon.name} usó {wild_move.name}. Causó {wild_damage} de daño.'
 
-            if battle.player_pokemon.current_hp <= 0:
+            if new_pokemon.current_hp <= 0:
                 next_pokemon = self.get_next_available_pokemon(battle.player)
                 if next_pokemon:
                     battle.player_pokemon = next_pokemon
@@ -638,22 +619,46 @@ class BattleViewSet(viewsets.ViewSet):
 
     def handle_battle_win(self, battle, message):
         """Manejar victoria en combate"""
-        # Otorgar experiencia (simplificado)
+        # Otorgar experiencia
         experience_gained = battle.wild_level * 10
-        battle.player_pokemon.experience += experience_gained
-        battle.player_pokemon.save()
+
+        # Guardar estado original para el mensaje
+        original_level = battle.player_pokemon.level
+        original_pokemon_name = battle.player_pokemon.pokemon.name
+
+        # ACTUALIZACIÓN: Recargar el Pokémon desde la base de datos para asegurar datos frescos
+        from usuario.models.PlayerPokemon import PlayerPokemon
+        player_pokemon = PlayerPokemon.objects.get(pk=battle.player_pokemon.pk)
+
+        # Agregar experiencia (puede causar subida de nivel y evolución)
+        leveled_up = player_pokemon.add_experience(experience_gained)
 
         # Otorgar dinero
         money_gained = battle.wild_level * 5
         battle.player.money += money_gained
         battle.player.save()
 
+        # Construir mensaje detallado
+        victory_message = f'{message} ¡Has derrotado al {battle.wild_pokemon.name} salvaje! '
+        victory_message += f'Ganaste {experience_gained} de experiencia y ${money_gained}.'
+
+        if leveled_up:
+            victory_message += f' ¡{original_pokemon_name} subió al nivel {player_pokemon.level}!'
+
+            # Verificar si evolucionó
+            if player_pokemon.just_evolved:
+                victory_message += f' ¡Y evolucionó a {player_pokemon.pokemon.name}!'
+
         return Response({
-            'message': f'{message} ¡Has derrotado al {battle.wild_pokemon.name} salvaje! Ganaste {experience_gained} de experiencia y ${money_gained}.',
+            'message': victory_message,
             'battle_ended': True,
             'won': True,
             'experience_gained': experience_gained,
-            'money_gained': money_gained
+            'money_gained': money_gained,
+            'leveled_up': leveled_up,
+            'new_level': player_pokemon.level if leveled_up else None,
+            'evolved': player_pokemon.just_evolved if leveled_up else False,
+            'new_pokemon_name': player_pokemon.pokemon.name if player_pokemon.just_evolved else None
         })
 
     def handle_battle_loss(self, battle, message):
@@ -668,10 +673,9 @@ class BattleViewSet(viewsets.ViewSet):
         battle.player.current_location = last_town
         battle.player.save()
 
-        # Curar todos los Pokémon
-        for pokemon in battle.player.pokemons.all():
-            pokemon.current_hp = pokemon.hp
-            pokemon.save()
+        # ACTUALIZACIÓN: Curar todos los Pokémon usando update para evitar reordenamiento
+        from usuario.models.PlayerPokemon import PlayerPokemon
+        PlayerPokemon.objects.filter(player=battle.player).update(current_hp=models.F('hp'))
 
         return Response({
             'message': f'{message} Todos tus Pokémon fueron derrotados. Has sido transportado a {last_town.name} y tus Pokémon han sido curados.',
@@ -691,8 +695,17 @@ class BattleViewSet(viewsets.ViewSet):
             in_team=False  # Va a la reserva
         )
         new_pokemon.calculate_stats()
-        new_pokemon.current_hp = new_pokemon.hp
-        new_pokemon.save()
+
+        # ACTUALIZACIÓN: Usar update para evitar reordenamiento
+        PlayerPokemon.objects.filter(pk=new_pokemon.pk).update(
+            hp=new_pokemon.hp,
+            current_hp=new_pokemon.hp,
+            attack=new_pokemon.attack,
+            defense=new_pokemon.defense,
+            special_attack=new_pokemon.special_attack,
+            special_defense=new_pokemon.special_defense,
+            speed=new_pokemon.speed
+        )
 
         # Aprender movimientos iniciales
         wild_moves = PokemonMove.objects.filter(
