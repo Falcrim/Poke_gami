@@ -30,6 +30,13 @@ class PokemonCenterViewSet(viewsets.ViewSet):
         healed_count = 0
         for pokemon in team_pokemons:
             PlayerPokemon.objects.filter(pk=pokemon.pk).update(current_hp=pokemon.hp)
+
+            if pokemon.moves_pp:
+                for move in pokemon.moves.all():
+                    move_id_str = str(move.id)
+                    pokemon.moves_pp[move_id_str] = move.pp
+                PlayerPokemon.objects.filter(pk=pokemon.pk).update(moves_pp=pokemon.moves_pp)
+
             healed_count += 1
 
         return Response({

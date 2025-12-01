@@ -24,7 +24,7 @@ class PlayerPokemon(models.Model):
     special_attack = models.IntegerField(default=0)
     special_defense = models.IntegerField(default=0)
     speed = models.IntegerField(default=0)
-
+    moves_pp = models.JSONField(default=dict, blank=True)
     just_evolved = models.BooleanField(default=False)
 
     class Meta:
@@ -209,8 +209,15 @@ class PlayerPokemon(models.Model):
             if not self.current_hp or self.current_hp > self.hp:
                 self.current_hp = self.hp
 
+        if not self.moves_pp:
+            self.moves_pp = {}
+
+        for move in self.moves.all():
+            move_id_str = str(move.id)
+            if move_id_str not in self.moves_pp:
+                self.moves_pp[move_id_str] = move.pp
+
         if not self.just_evolved and self.pk:
-            # Si no acaba de evolucionar, asegurarse de que el flag esté en False
             current_just_evolved = PlayerPokemon.objects.filter(pk=self.pk).values_list('just_evolved',
                                                                                         flat=True).first()
             if current_just_evolved and not self.just_evolved:

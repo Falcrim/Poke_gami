@@ -8,12 +8,10 @@ class TeamOrderViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def _get_ordered_team(self, player):
-        """Obtener equipo ordenado correctamente"""
         return player.pokemons.filter(in_team=True).order_by('order', 'id')
 
     @action(detail=False, methods=['get'])
     def get_team_order(self, request):
-        """Obtener el equipo de combate ordenado"""
         player = request.user.player_profile
         team_pokemons = self._get_ordered_team(player)
 

@@ -33,16 +33,21 @@ class PlayerPokemonSerializer(serializers.ModelSerializer):
         return types
 
     def get_moves_details(self, obj):
-        return [{
-            'id': move.id,
-            'name': move.name,
-            'type': move.type,
-            'power': move.power,
-            'accuracy': move.accuracy,
-            'pp': move.pp,
-            'damage_class': move.damage_class,
-            'current_pp': move.pp
-        } for move in obj.moves.all()]
+        moves_details = []
+        for move in obj.moves.all():
+            current_pp = obj.moves_pp.get(str(move.id), move.pp) if obj.moves_pp else move.pp
+
+            moves_details.append({
+                'id': move.id,
+                'name': move.name,
+                'type': move.type,
+                'power': move.power,
+                'accuracy': move.accuracy,
+                'pp': move.pp,
+                'current_pp': current_pp,
+                'damage_class': move.damage_class,
+            })
+        return moves_details
 
     def get_available_moves(self, obj):
         available_moves = obj.get_available_moves()
