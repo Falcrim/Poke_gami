@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 import random
+from django.db import models
 from django.db import transaction
 from usuario.models.Battle import Battle
 from usuario.models.Player import Player
@@ -346,7 +347,7 @@ class BattleViewSet(viewsets.ViewSet):
                     battle.save()
                     return self.handle_battle_win(battle, message)
 
-            else:  # battle_type == 'trainer'
+            if battle.battle_type == 'trainer' :  # battle_type == 'trainer'
                 # Lógica para entrenador
                 current_opponent = battle.current_opponent_pokemon
                 if not current_opponent:
@@ -411,7 +412,7 @@ class BattleViewSet(viewsets.ViewSet):
                 if wild_damage > 0:
                     message += f'Causó {wild_damage} de daño.'
 
-            else:  # battle_type == 'trainer'
+            if battle.battle_type == 'trainer':  # battle_type == 'trainer'
                 # Turno del Pokémon del entrenador
                 current_opponent = battle.current_opponent_pokemon
                 if current_opponent and current_opponent['current_hp'] > 0:
@@ -811,7 +812,7 @@ class BattleViewSet(viewsets.ViewSet):
 
                 message = f'Cambiaste a {new_pokemon.pokemon.name}. '
                 message += f'{battle.wild_pokemon.name} usó {wild_move.name}. Causó {wild_damage} de daño.'
-            else:
+            if battle.battle_type == 'trainer':
                 trainer_damage, trainer_move = self.trainer_attack(battle)
                 new_pokemon.current_hp -= trainer_damage
                 new_pokemon.current_hp = max(0, new_pokemon.current_hp)
@@ -855,7 +856,7 @@ class BattleViewSet(viewsets.ViewSet):
 
         # Siempre se puede huir de Pokémon salvajes
         # Para entrenadores, podría haber penalización o no permitirse
-        if battle.battle_type == 'trainer':
+        #if battle.battle_type == 'trainer':
             # Podrías decidir no permitir huir de entrenadores
             # battle.state = 'fled'
             # battle.save()
@@ -864,7 +865,7 @@ class BattleViewSet(viewsets.ViewSet):
             #     'battle_ended': True,
             #     'fled': True
             # })
-            return Response({'error': 'No puedes huir de un combate contra entrenador'}, status=400)
+        #    return Response({'error': 'No puedes huir de un combate contra entrenador'}, status=400)
 
         battle.state = 'fled'
         battle.save()
@@ -1419,6 +1420,7 @@ class BattleViewSet(viewsets.ViewSet):
 
         # Curar todos los Pokémon usando update para evitar reordenamiento
         from usuario.models.PlayerPokemon import PlayerPokemon
+        # CORRECCIÓN: Usar models.F en lugar de F directamente
         PlayerPokemon.objects.filter(player=battle.player).update(current_hp=models.F('hp'))
 
         return Response({

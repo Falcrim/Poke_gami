@@ -201,3 +201,28 @@ class Battle(models.Model):
         # Asegurar rating mínimo
         if loser.user.pvp_rating < 0:
             loser.user.pvp_rating = 0
+
+    @property
+    def current_opponent_pokemon(self):
+        """Devuelve el Pokémon actual del oponente"""
+        if self.battle_type == 'wild':
+            return {
+                'pokemon': self.wild_pokemon,
+                'level': self.wild_level,
+                'current_hp': self.wild_current_hp,
+                'max_hp': self.wild_max_hp
+            }
+        else:
+            if self.trainer_team and self.current_trainer_pokemon < len(self.trainer_team):
+                return self.trainer_team[self.current_trainer_pokemon]
+            return None
+
+    def is_trainer_defeated(self):
+        """Verifica si todos los Pokémon del entrenador están derrotados"""
+        if self.battle_type != 'trainer':
+            return False
+
+        for pokemon in self.trainer_team:
+            if pokemon['current_hp'] > 0:
+                return False
+        return True
