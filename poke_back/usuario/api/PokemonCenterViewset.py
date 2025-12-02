@@ -282,16 +282,13 @@ class PokemonCenterViewSet(viewsets.ViewSet):
             if pokemon.order != new_order:
                 PlayerPokemon.objects.filter(pk=pokemon.pk).update(order=new_order)
 
-    # En cada método que modifique el equipo, llama a _reorder_team al final
 
     # Enponts de prueba para agregar Pokémon
     @action(detail=False, methods=['post'])
     def add_test_pokemon(self, request):
-        """Endpoint temporal para agregar Pokémon de prueba"""
         player = request.user.player_profile
 
-        # Pokémon disponibles para agregar
-        test_pokemon_ids = [16, 19, 10, 13]  # Pidgey, Rattata, Caterpie, Weedle
+        test_pokemon_ids = [16, 19, 10, 13]
 
         pokemon_id = request.data.get('pokemon_id')
         if not pokemon_id:
@@ -304,10 +301,8 @@ class PokemonCenterViewSet(viewsets.ViewSet):
             from pokemon.models.Pokemon import Pokemon
             from pokemon.models.PokemonMove import PokemonMove
 
-            # Obtener el Pokémon
             test_pokemon = Pokemon.objects.get(pokedex_id=pokemon_id)
 
-            # Verificar si el jugador ya tiene este Pokémon
             existing_pokemon = player.pokemons.filter(pokemon=test_pokemon).first()
             if existing_pokemon:
                 return Response({
@@ -315,22 +310,19 @@ class PokemonCenterViewSet(viewsets.ViewSet):
                     'pokemon_id': existing_pokemon.id
                 })
 
-            # Crear el nuevo Pokémon (siempre en reserva inicialmente)
             new_pokemon = PlayerPokemon.objects.create(
                 player=player,
                 pokemon=test_pokemon,
                 level=5,
                 experience=0,
-                in_team=False,  # Siempre a reserva inicialmente
-                order=0  # Orden 0 en reserva
+                in_team=False,
+                order=0
             )
 
-            # Calcular stats
             new_pokemon.calculate_stats()
             new_pokemon.current_hp = new_pokemon.hp
             new_pokemon.save()
 
-            # Aprender movimientos iniciales
             initial_moves = PokemonMove.objects.filter(
                 pokemon=test_pokemon,
                 level__lte=5
@@ -339,7 +331,6 @@ class PokemonCenterViewSet(viewsets.ViewSet):
             for move in initial_moves:
                 new_pokemon.moves.add(move.move)
 
-            # Registrar en la Pokédex
             from usuario.models.Pokedex import Pokedex
             Pokedex.objects.get_or_create(
                 player=player,
@@ -368,7 +359,6 @@ class PokemonCenterViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def available_test_pokemon(self, request):
-        """Ver Pokémon disponibles para agregar en pruebas"""
         available_pokemon = [
             {'id': 16, 'name': 'Pidgey', 'types': ['normal', 'flying']},
             {'id': 19, 'name': 'Rattata', 'types': ['normal']},

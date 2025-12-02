@@ -31,10 +31,8 @@ class Trainer(models.Model):
         return f"{self.name} ({self.get_trainer_type_display()})"
 
     def generate_team(self):
-        """Genera un equipo de Pokémon basado en los Pokémon salvajes de la ubicación"""
         from pokemon.models.WildPokemonEncounter import WildPokemonEncounter
 
-        # Obtener todos los encuentros salvajes de esta ubicación
         encounters = WildPokemonEncounter.objects.filter(location=self.location)
 
         if not encounters:
@@ -42,13 +40,10 @@ class Trainer(models.Model):
 
         team = []
         for _ in range(self.team_size):
-            # Seleccionar un Pokémon basado en la rareza
             encounter = self._weighted_random_encounter(encounters)
 
-            # Determinar nivel (puede ser aleatorio o basado en el tipo de entrenador)
             level = self._calculate_trainer_level()
 
-            # Calcular stats
             hp = self._calculate_hp(encounter.pokemon.base_hp, level)
             attack = self._calculate_stat(encounter.pokemon.base_attack, level)
             defense = self._calculate_stat(encounter.pokemon.base_defense, level)
@@ -56,7 +51,6 @@ class Trainer(models.Model):
             special_defense = self._calculate_stat(encounter.pokemon.base_special_defense, level)
             speed = self._calculate_stat(encounter.pokemon.base_speed, level)
 
-            # Obtener movimientos (hasta 4)
             from pokemon.models.PokemonMove import PokemonMove
             available_moves = PokemonMove.objects.filter(
                 pokemon=encounter.pokemon,
@@ -83,7 +77,6 @@ class Trainer(models.Model):
         return team
 
     def _weighted_random_encounter(self, encounters):
-        """Selecciona un encuentro basado en la rareza"""
         import random
 
         rarity_weights = {
@@ -100,7 +93,6 @@ class Trainer(models.Model):
         return random.choice(weighted_encounters)
 
     def _calculate_trainer_level(self):
-        """Calcula el nivel basado en el tipo de entrenador"""
         import random
 
         level_modifiers = {

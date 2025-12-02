@@ -53,7 +53,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
     }
 
     def generate_room_code(self):
-        """Genera un código único de sala"""
         while True:
             code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
             if not Battle.objects.filter(room_code=code).exists():
@@ -62,7 +61,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
     def scale_pokemon_to_level_50(self, player_pokemon):
         level = 50
 
-        # Calcular stats (igual que antes)
         hp = int((2 * player_pokemon.pokemon.base_hp * level) / 100) + level + 10
         attack = int((2 * player_pokemon.pokemon.base_attack * level) / 100) + 5
         defense = int((2 * player_pokemon.pokemon.base_defense * level) / 100) + 5
@@ -75,9 +73,8 @@ class PvPBattleViewSet(viewsets.ViewSet):
         moves_data = []
         current_move_ids = set()
 
-        # 1. PRIMERO: Movimientos actuales del Pokémon (respetando elección del jugador)
         current_moves = list(player_pokemon.moves.all())
-        for move in current_moves[:4]:  # Solo hasta 4
+        for move in current_moves[:4]:
             current_pp = player_pokemon.moves_pp.get(str(move.id), move.pp) if player_pokemon.moves_pp else move.pp
 
             moves_data.append({
@@ -92,34 +89,26 @@ class PvPBattleViewSet(viewsets.ViewSet):
             })
             current_move_ids.add(move.id)
 
-        # 2. SEGUNDO: Si tenemos menos de 4, agregar movimientos por nivel (más fuertes primero)
         if len(moves_data) < 4:
-            # Obtener todos los movimientos por nivel ordenados por:
-            # 1. Movimientos de daño primero (no status)
-            # 2. Mayor poder
-            # 3. Mayor nivel aprendido
             level_moves = PokemonMove.objects.filter(
                 pokemon=player_pokemon.pokemon,
                 level__lte=level
             ).select_related('move').order_by('-level')
 
-            # Convertir a lista para ordenar personalizado
             move_list = []
             for pm in level_moves:
                 move = pm.move
                 if move.id in current_move_ids:
                     continue
 
-                # Puntuación para ordenar
                 score = 0
                 if move.damage_class != 'status':
-                    score += 1000  # Priorizar movimientos de daño
-                score += move.power or 0  # Mayor poder = mejor
-                score += pm.level * 10  # Mayor nivel aprendido = mejor
+                    score += 1000
+                score += move.power or 0
+                score += pm.level * 10
 
                 move_list.append((score, move))
 
-            # Ordenar por score descendente
             move_list.sort(key=lambda x: x[0], reverse=True)
 
             for score, move in move_list:
@@ -138,9 +127,7 @@ class PvPBattleViewSet(viewsets.ViewSet):
                 })
                 current_move_ids.add(move.id)
 
-        # 3. TERCERO: Si aún falta, agregar movimientos del mismo tipo (preferiblemente de daño)
         if len(moves_data) < 4:
-            # Buscar movimientos del tipo del Pokémon
             type_moves = Move.objects.filter(
                 type__in=[player_pokemon.pokemon.type1, player_pokemon.pokemon.type2]
             ).exclude(id__in=current_move_ids).order_by('-power')
@@ -161,17 +148,16 @@ class PvPBattleViewSet(viewsets.ViewSet):
                 })
                 current_move_ids.add(move.id)
 
-        # 4. CUARTO: Como último recurso, movimientos básicos útiles
         if len(moves_data) < 4:
             basic_moves_list = [
-                ('Quick Attack', 40, 100),  # Ataque prioritario
+                ('Quick Attack', 40, 100),
                 ('Tackle', 40, 100),
                 ('Scratch', 40, 100),
                 ('Pound', 40, 100),
-                ('Ember', 40, 100),  # Para Pokémon de fuego
-                ('Water Gun', 40, 100),  # Para Pokémon de agua
-                ('Vine Whip', 45, 100),  # Para Pokémon de planta
-                ('Thunder Shock', 40, 100),  # Para Pokémon eléctrico
+                ('Ember', 40, 100),
+                ('Water Gun', 40, 100),
+                ('Vine Whip', 45, 100),
+                ('Thunder Shock', 40, 100),
             ]
 
             for move_name, power, accuracy in basic_moves_list:
@@ -192,7 +178,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
                     })
                     current_move_ids.add(move.id)
 
-        # Asegurar que tenemos al menos 1 movimiento (nunca debería pasar)
         if not moves_data:
             default_move = Move.objects.filter(damage_class='physical', power__gt=0).first()
             if default_move:
@@ -230,14 +215,12 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def create_room(self, request):
-        """Crear una sala de PvP"""
         player = request.user.player_profile
         battle_format = request.data.get('battle_format', '1vs1')
 
         if battle_format not in ['1vs1', '2vs2']:
             return Response({'error': 'Formato de batalla no válido'}, status=400)
 
-        # Verificar que el jugador tiene Pokémon suficientes
         required_pokemon = 1 if battle_format == '1vs1' else 2
         available_pokemon = player.pokemons.filter(in_team=True, current_hp__gt=0).count()
 
@@ -246,16 +229,13 @@ class PvPBattleViewSet(viewsets.ViewSet):
                 'error': f'Necesitas al menos {required_pokemon} Pokémon en tu equipo para este formato'
             }, status=400)
 
-        # Obtener los Pokémon del equipo
         team_pokemons = player.pokemons.filter(in_team=True, current_hp__gt=0).order_by('order')[:required_pokemon]
 
-        # Escalar Pokémon al nivel 50
         scaled_team = []
         for pokemon in team_pokemons:
             scaled_team.append(self.scale_pokemon_to_level_50(pokemon))
 
         with transaction.atomic():
-            # Crear la batalla
             battle = Battle.objects.create(
                 battle_type='pvp',
                 battle_format=battle_format,
@@ -278,7 +258,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def available_rooms(self, request):
-        """Obtener salas disponibles para unirse"""
         rooms = Battle.objects.filter(
             battle_type='pvp',
             state='waiting',
@@ -294,7 +273,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def join_room(self, request):
-        """Unirse a una sala de PvP"""
         player = request.user.player_profile
         room_code = request.data.get('room_code')
         password = request.data.get('password')
@@ -312,15 +290,12 @@ class PvPBattleViewSet(viewsets.ViewSet):
         except Battle.DoesNotExist:
             return Response({'error': 'Sala no encontrada o no disponible'}, status=404)
 
-        # Verificar contraseña si la sala es privada
         if battle.is_private and battle.password != password:
             return Response({'error': 'Contraseña incorrecta'}, status=403)
 
-        # No permitir unirse a tu propia sala
         if battle.player1 == player:
             return Response({'error': 'No puedes unirte a tu propia sala'}, status=400)
 
-        # Verificar que el jugador tiene Pokémon suficientes
         required_pokemon = 1 if battle.battle_format == '1vs1' else 2
         available_pokemon = player.pokemons.filter(in_team=True, current_hp__gt=0).count()
 
@@ -329,21 +304,17 @@ class PvPBattleViewSet(viewsets.ViewSet):
                 'error': f'Necesitas al menos {required_pokemon} Pokémon en tu equipo para esta batalla'
             }, status=400)
 
-        # Obtener los Pokémon del equipo
         team_pokemons = player.pokemons.filter(in_team=True, current_hp__gt=0).order_by('order')[:required_pokemon]
 
-        # Escalar Pokémon al nivel 50
         scaled_team = []
         for pokemon in team_pokemons:
             scaled_team.append(self.scale_pokemon_to_level_50(pokemon))
 
         with transaction.atomic():
-            # Unir al jugador a la batalla
             battle.player2 = player
             battle.player2_team = scaled_team
             battle.state = 'active'
 
-            # Decidir quién comienza basado en la velocidad del primer Pokémon
             player1_speed = battle.player1_team[0]['speed'] if battle.player1_team else 0
             player2_speed = scaled_team[0]['speed'] if scaled_team else 0
 
@@ -352,7 +323,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
             elif player2_speed > player1_speed:
                 battle.current_turn = battle.player2
             else:
-                # Empate, decide aleatoriamente
                 battle.current_turn = random.choice([battle.player1, battle.player2])
 
             battle.save()
@@ -369,7 +339,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['get'])
     def state(self, request, pk=None):
-        """Obtener el estado actual de la batalla PvP"""
         battle = self.get_pvp_battle(pk, request.user)
         if not battle:
             return Response({'error': 'Batalla PvP no encontrada o no tienes acceso'}, status=404)
@@ -378,29 +347,25 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def attack(self, request, pk=None):
-        """Atacar en batalla PvP"""
         battle = self.get_pvp_battle(pk, request.user)
         if not battle:
             return Response({'error': 'Batalla PvP no encontrada'}, status=404)
 
         player = request.user.player_profile
 
-        # Verificar que es el turno del jugador
         if not battle.is_player_turn(player):
             return Response({'error': 'No es tu turno'}, status=400)
 
         move_id = request.data.get('move_id')
-        target = request.data.get('target', 0)  # Para 2vs2, especificar qué Pokémon atacar
+        target = request.data.get('target', 0)
 
         if not move_id:
             return Response({'error': 'Se requiere move_id'}, status=400)
 
-        # Obtener Pokémon actual del jugador
         player_pokemon = battle.get_current_pokemon(player)
         if not player_pokemon or player_pokemon['current_hp'] <= 0:
             return Response({'error': 'Tu Pokémon actual está debilitado'}, status=400)
 
-        # Buscar el movimiento en los movimientos del Pokémon
         move = None
         for m in player_pokemon['moves']:
             if str(m['id']) == str(move_id):
@@ -410,44 +375,35 @@ class PvPBattleViewSet(viewsets.ViewSet):
         if not move:
             return Response({'error': 'Movimiento no disponible'}, status=400)
 
-        # Verificar PP
         if move['current_pp'] <= 0:
             return Response({'error': f'No hay PP restantes para {move["name"]}'}, status=400)
 
         with transaction.atomic():
-            # Reducir PP
             move['current_pp'] -= 1
 
-            # Actualizar el equipo del jugador
             if player == battle.player1:
                 battle.player1_team[battle.player1_current_pokemon] = player_pokemon
             else:
                 battle.player2_team[battle.player2_current_pokemon] = player_pokemon
 
-            # Obtener Pokémon objetivo
             opponent = battle.player2 if player == battle.player1 else battle.player1
             opponent_team = battle.get_current_opponent_team(player)
 
-            # Para 2vs2, seleccionar el objetivo
             if battle.battle_format == '2vs2':
                 if target < 0 or target >= len(opponent_team):
                     return Response({'error': 'Objetivo no válido'}, status=400)
                 opponent_pokemon = opponent_team[target]
             else:
-                # 1vs1, atacar al Pokémon actual
                 opponent_pokemon = battle.get_opponent_current_pokemon(player)
 
             if not opponent_pokemon or opponent_pokemon['current_hp'] <= 0:
                 return Response({'error': 'El Pokémon objetivo está debilitado'}, status=400)
 
-            # Calcular daño
             damage = self.calculate_pvp_damage(player_pokemon, opponent_pokemon, move)
 
-            # Aplicar daño
             opponent_pokemon['current_hp'] -= damage
             opponent_pokemon['current_hp'] = max(0, opponent_pokemon['current_hp'])
 
-            # Actualizar equipo del oponente
             if player == battle.player1:
                 battle.player2_team[battle.player2_current_pokemon] = opponent_pokemon
             else:
@@ -457,11 +413,9 @@ class PvPBattleViewSet(viewsets.ViewSet):
             if damage > 0:
                 message += f'Causó {damage} de daño.'
 
-            # Verificar si el Pokémon oponente fue derrotado
             if opponent_pokemon['current_hp'] <= 0:
                 message += f' ¡{opponent_pokemon["pokemon_name"]} fue derrotado!'
 
-                # Verificar si todo el equipo oponente está derrotado
                 if battle.check_team_defeated(battle.get_current_opponent_team(player)):
                     battle.end_battle(player)
                     message += f' ¡Has ganado la batalla!'
@@ -473,7 +427,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
                         'battle_state': self.get_pvp_battle_state(battle, player)
                     })
 
-            # Cambiar turno al oponente
             battle.current_turn = opponent
             battle.save()
 
@@ -486,18 +439,15 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def switch_pokemon(self, request, pk=None):
-        """Cambiar de Pokémon en batalla PvP (solo en 2vs2)"""
         battle = self.get_pvp_battle(pk, request.user)
         if not battle:
             return Response({'error': 'Batalla PvP no encontrada'}, status=404)
 
         player = request.user.player_profile
 
-        # Verificar que es el turno del jugador
         if not battle.is_player_turn(player):
             return Response({'error': 'No es tu turno'}, status=400)
 
-        # Solo permitir en formato 2vs2
         if battle.battle_format != '2vs2':
             return Response({'error': 'Solo se puede cambiar Pokémon en formato 2vs2'}, status=400)
 
@@ -518,13 +468,11 @@ class PvPBattleViewSet(viewsets.ViewSet):
             return Response({'error': 'Ese Pokémon está debilitado'}, status=400)
 
         with transaction.atomic():
-            # Cambiar Pokémon
             if player == battle.player1:
                 battle.player1_current_pokemon = pokemon_index
             else:
                 battle.player2_current_pokemon = pokemon_index
 
-            # Cambiar turno al oponente
             opponent = battle.player2 if player == battle.player1 else battle.player1
             battle.current_turn = opponent
             battle.save()
@@ -537,7 +485,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def surrender(self, request, pk=None):
-        """Rendirse en batalla PvP"""
         battle = self.get_pvp_battle(pk, request.user)
         if not battle:
             return Response({'error': 'Batalla PvP no encontrada'}, status=404)
@@ -564,13 +511,10 @@ class PvPBattleViewSet(viewsets.ViewSet):
         player = request.user.player_profile
         item_type = request.data.get('item_type')
 
-        # Verificar turno
         if not battle.is_player_turn(player):
             return Response({'error': 'No es tu turno'}, status=400)
 
-        # Lógica de usar poción (similar a battle salvaje)
         if item_type in ['potion', 'super_potion', 'hyper_potion']:
-            # Usar poción
             bag = Bag.objects.get(player=player)
 
             if getattr(bag, f'{item_type}s', 0) <= 0:
@@ -588,27 +532,22 @@ class PvPBattleViewSet(viewsets.ViewSet):
             new_hp = min(current_pokemon['current_hp'] + heal_amount, current_pokemon['max_hp'])
             actual_heal = new_hp - current_pokemon['current_hp']
 
-            # Actualizar HP
             current_pokemon['current_hp'] = new_hp
 
-            # Guardar cambios
             if player == battle.player1:
                 battle.player1_team[battle.player1_current_pokemon] = current_pokemon
             else:
                 battle.player2_team[battle.player2_current_pokemon] = current_pokemon
 
-            # Usar item del inventario
             setattr(bag, f'{item_type}s', getattr(bag, f'{item_type}s') - 1)
             bag.save()
 
             message = f'{player.user.username} usó una {item_type}. Curó {actual_heal} HP.'
 
-            # Cambiar turno
             opponent = battle.player2 if player == battle.player1 else battle.player1
             battle.current_turn = opponent
             battle.save()
 
-            # Notificar a ambos jugadores
             self.send_battle_notification(battle.id, {
                 'action': 'use_item',
                 'player': player.user.username,
@@ -629,7 +568,6 @@ class PvPBattleViewSet(viewsets.ViewSet):
         return Response({'error': 'Item no válido para PvP'}, status=400)
 
     def get_pvp_battle(self, battle_id, user):
-        """Obtener una batalla PvP donde el usuario sea jugador"""
         try:
             battle = Battle.objects.get(
                 id=battle_id,
@@ -642,10 +580,8 @@ class PvPBattleViewSet(viewsets.ViewSet):
             return None
 
     def get_pvp_battle_state(self, battle, player):
-        """Obtener el estado de la batalla PvP para un jugador"""
         is_player1 = (player == battle.player1)
 
-        # Verificaciones de seguridad para evitar None
         player1_username = battle.player1.user.username if battle.player1 else None
         player2_username = battle.player2.user.username if battle.player2 else None
         current_turn_username = battle.current_turn.user.username if battle.current_turn else None
@@ -669,27 +605,23 @@ class PvPBattleViewSet(viewsets.ViewSet):
         }
 
     def calculate_pvp_damage(self, attacker, defender, move):
-        """Calcular daño en batalla PvP"""
         if move.get('damage_class') == 'status':
             return 0
 
-        # Determinar stat de ataque y defensa
         if move['damage_class'] == 'physical':
             attack_stat = attacker['attack']
             defense_stat = defender['defense']
-        else:  # special
+        else:
             attack_stat = attacker['special_attack']
             defense_stat = defender['special_defense']
 
-        # Fórmula de daño
-        level = 50  # Todos a nivel 50 en PvP
+        level = 50
         level_factor = (2 * level) / 5 + 2
         power_factor = move['power'] if move['power'] else 0
         stat_factor = attack_stat / defense_stat
 
         base_damage = (level_factor * power_factor * stat_factor) / 50 + 2
 
-        # Modificador de tipo
         defender_types = [defender['type1']]
         if defender['type2']:
             defender_types.append(defender['type2'])
@@ -697,13 +629,11 @@ class PvPBattleViewSet(viewsets.ViewSet):
         type_effectiveness = self.get_type_effectiveness(move['type'], defender_types)
         base_damage *= type_effectiveness
 
-        # Modificador aleatorio (0.85 - 1.0)
         base_damage *= random.uniform(0.85, 1.0)
 
         return int(max(1, base_damage))
 
     def get_type_effectiveness(self, move_type, defender_types):
-        """Calcular efectividad del tipo"""
         effectiveness = 1.0
         for defender_type in defender_types:
             if defender_type and move_type in self.TYPE_EFFECTIVENESS:

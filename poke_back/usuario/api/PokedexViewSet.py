@@ -27,10 +27,8 @@ class PokedexSerializer(serializers.ModelSerializer):
         return types
 
     def get_evolution_info(self, obj):
-        """Obtener información completa de la evolución"""
         pokemon = obj.pokemon
 
-        # Si este Pokémon evoluciona de otro
         evolves_from = None
         if pokemon.evolves_from:
             evolves_from = {
@@ -39,7 +37,6 @@ class PokedexSerializer(serializers.ModelSerializer):
                 'pokedex_id': pokemon.evolves_from.pokedex_id
             }
 
-        # CORRECCIÓN: Buscar qué Pokémon evoluciona desde este
         evolves_to = None
         evolved_pokemon = Pokemon.objects.filter(evolves_from=pokemon).first()
         if evolved_pokemon:
@@ -56,7 +53,6 @@ class PokedexSerializer(serializers.ModelSerializer):
         }
 
     def get_locations(self, obj):
-        """Obtener todas las rutas donde aparece este Pokémon"""
         try:
             encounters = WildPokemonEncounter.objects.filter(pokemon=obj.pokemon)
             locations = []
@@ -77,10 +73,8 @@ class PokedexSerializer(serializers.ModelSerializer):
             return []
 
     def get_description(self, obj):
-        """Generar descripción del Pokémon con información de rutas"""
         pokemon = obj.pokemon
 
-        # Obtener rutas donde aparece
         encounters = WildPokemonEncounter.objects.filter(pokemon=pokemon)
         route_names = [encounter.location.name for encounter in encounters]
 
@@ -90,7 +84,6 @@ class PokedexSerializer(serializers.ModelSerializer):
         else:
             description = "Este Pokémon no aparece en rutas salvajes"
 
-        # Agregar información de evolución si existe
         evolved_pokemon = Pokemon.objects.filter(evolves_from=pokemon).first()
         if evolved_pokemon and evolved_pokemon.evolution_level:
             description += f". Evoluciona a {evolved_pokemon.name} al nivel {evolved_pokemon.evolution_level}"
@@ -107,9 +100,8 @@ class PokedexViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """Obtener estadísticas de la Pokédex"""
         player = request.user.player_profile
-        total_pokemon = 151  # Pokémon de Kanto
+        total_pokemon = 151
 
         pokedex_entries = Pokedex.objects.filter(player=player)
         seen_count = pokedex_entries.count()

@@ -20,7 +20,7 @@ class WildPokemonEncounterSerializer(serializers.ModelSerializer):
 
 class LocationSerializer(serializers.ModelSerializer):
     connected_locations = serializers.SerializerMethodField()
-    wild_pokemons = WildPokemonEncounterSerializer(many=True, read_only=True)  # QUITAR EL SOURCE
+    wild_pokemons = WildPokemonEncounterSerializer(many=True, read_only=True)
 
     class Meta:
         model = Location

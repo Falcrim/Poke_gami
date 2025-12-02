@@ -26,10 +26,8 @@ class ShopViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def buy(self, request, pk=None):
-        """Comprar un item de la tienda"""
         player = request.user.player_profile
 
-        # Verificar ubicación
         try:
             self._check_location(player)
         except ValidationError as e:
@@ -38,15 +36,12 @@ class ShopViewSet(viewsets.ReadOnlyModelViewSet):
         item = self.get_object()
         bag = Bag.objects.get(player=player)
 
-        # Verificar si el jugador tiene suficiente dinero
         if player.money < item.price:
             return Response({'error': 'No tienes suficiente dinero'}, status=400)
 
-        # Comprar el item
         player.money -= item.price
         player.save()
 
-        # Agregar el item a la mochila según el tipo
         if item.item_type == 'potion':
             bag.potions += 1
         elif item.item_type == 'super_potion':

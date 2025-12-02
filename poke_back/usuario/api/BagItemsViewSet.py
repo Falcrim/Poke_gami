@@ -10,7 +10,6 @@ class BagItemsViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'])
     def use_potion(self, request):
-        """Usar una poción en un Pokémon"""
         player = request.user.player_profile
         bag = Bag.objects.get(player=player)
         pokemon_id = request.data.get('pokemon_id')
@@ -24,11 +23,9 @@ class BagItemsViewSet(viewsets.ViewSet):
         except PlayerPokemon.DoesNotExist:
             return Response({'error': 'Pokémon no encontrado'}, status=404)
 
-        # Verificar que el Pokémon necesita curación
         if pokemon.current_hp >= pokemon.hp:
             return Response({'error': 'El Pokémon ya tiene toda su salud'}, status=400)
 
-        # Determinar la cantidad de HP a curar según el tipo de poción
         heal_amounts = {
             'potion': 20,
             'super_potion': 50,
@@ -38,11 +35,9 @@ class BagItemsViewSet(viewsets.ViewSet):
         if potion_type not in heal_amounts:
             return Response({'error': 'Tipo de poción inválido'}, status=400)
 
-        # Verificar que hay pociones disponibles
         if not bag.use_item(potion_type):
             return Response({'error': f'No tienes {potion_type}s disponibles'}, status=400)
 
-        # Aplicar la curación
         new_hp = min(pokemon.current_hp + heal_amounts[potion_type], pokemon.hp)
         pokemon.current_hp = new_hp
         pokemon.save()
@@ -57,7 +52,6 @@ class BagItemsViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def available_items(self, request):
-        """Obtener todos los items disponibles en la mochila"""
         player = request.user.player_profile
         bag = Bag.objects.get(player=player)
 

@@ -37,7 +37,7 @@ class UserSerializer(serializers.ModelSerializer):
                 'starter_chosen': player.starter_chosen,
                 'current_location': current_location,
                 'pokemon_count': player.pokemons.count(),
-                'team_count': player.pokemons.count()  # Por ahora es lo mismo, luego podemos diferenciar
+                'team_count': player.pokemons.count()
             }
         except:
             return None
@@ -46,7 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
         try:
             from usuario.models.Pokedex import Pokedex
             player = obj.player_profile
-            total_pokemon = 151  # Pokémon de Kanto
+            total_pokemon = 151
 
             pokedex_entries = Pokedex.objects.filter(player=player)
             seen_count = pokedex_entries.count()
@@ -69,20 +69,16 @@ class UserSerializer(serializers.ModelSerializer):
             return None
 
     def get_achievements(self, obj):
-        """Obtener logros del jugador"""
         achievements = []
         player = obj.player_profile
 
-        # Logro: Primer Pokémon
         if player.starter_chosen:
             achievements.append({'name': 'Entrenador Novato', 'description': 'Elegir Pokémon inicial'})
 
-        # Logro: Pokédex
         pokedex_stats = self.get_pokedex_stats(obj)
         if pokedex_stats and pokedex_stats['caught'] >= 10:
             achievements.append({'name': 'Coleccionista', 'description': 'Capturar 10 Pokémon'})
 
-        # Logro: Batallas
         if obj.battles_won >= 10:
             achievements.append({'name': 'Veterano', 'description': 'Ganar 10 batallas'})
 
@@ -103,7 +99,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
 
-        # Crear perfil de jugador automáticamente
         player = Player.objects.create(user=user)
         Bag.objects.create(player=player)
 
@@ -131,7 +126,6 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            # CORRECCIÓN: Usar el modelo Token correctamente
             token, created = Token.objects.get_or_create(user=user)
             return Response({
                 'token': token.key,
@@ -148,7 +142,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 password=serializer.validated_data['password']
             )
             if user:
-                # CORRECCIÓN: Usar el modelo Token correctamente
                 token, created = Token.objects.get_or_create(user=user)
                 return Response({
                     'token': token.key,
@@ -160,7 +153,6 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def logout(self, request):
         try:
-            # CORRECCIÓN: Eliminar el token correctamente
             Token.objects.filter(user=request.user).delete()
             return Response({'message': 'Sesión cerrada correctamente'})
         except Exception as e:
@@ -168,21 +160,17 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def profile(self, request):
-        """Obtener perfil del usuario actual"""
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def me(self, request):
-        """Obtener perfil completo del usuario actual"""
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def ranking(self, request):
-        """Obtener ranking general de PVP"""
-        # Obtener top 50 jugadores por rating PVP
         top_players = User.objects.all().order_by('-pvp_rating', 'username')[:50]
 
         ranking_data = []
@@ -191,7 +179,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 player_info = user.player_profile
                 pokemon_count = player_info.pokemons.count()
 
-                # Obtener estadísticas de batallas
                 total_battles = user.battles_won + user.battles_lost
                 win_rate = round((user.battles_won / total_battles * 100), 2) if total_battles > 0 else 0
 
@@ -213,14 +200,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def my_ranking(self, request):
-        """Obtener información de ranking del usuario actual y competidores cercanos"""
         user = request.user
 
-        # Obtener posición actual
         higher_rated = User.objects.filter(pvp_rating__gt=user.pvp_rating).count()
         user_position = higher_rated + 1
 
-        # Obtener competidores cercanos (2 arriba, el usuario, 2 abajo)
         start_idx = max(0, user_position - 3)
         end_idx = user_position + 2
 
@@ -246,7 +230,6 @@ class UserViewSet(viewsets.ModelViewSet):
             except:
                 continue
 
-        # Estadísticas del usuario actual
         total_battles = user.battles_won + user.battles_lost
         win_rate = round((user.battles_won / total_battles * 100), 2) if total_battles > 0 else 0
 

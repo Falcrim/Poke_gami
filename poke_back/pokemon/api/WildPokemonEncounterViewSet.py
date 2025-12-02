@@ -44,12 +44,10 @@ class WildPokemonEncounterViewSet(viewsets.ReadOnlyModelViewSet):
         if not location_id:
             return Response({'error': 'Se requiere location_id'}, status=400)
 
-        # Obtener encuentros posibles en esta ubicación
         encounters = WildPokemonEncounter.objects.filter(location_id=location_id)
         if not encounters.exists():
             return Response({'error': 'No hay Pokémon en esta ubicación'}, status=400)
 
-        # Sistema de rareza
         rarity_weights = {
             'common': 60,
             'uncommon': 30,
@@ -64,11 +62,9 @@ class WildPokemonEncounterViewSet(viewsets.ReadOnlyModelViewSet):
         if not weighted_encounters:
             return Response({'error': 'No se pudo generar encuentro'}, status=400)
 
-        # Seleccionar Pokémon aleatorio
         selected_encounter = random.choice(weighted_encounters)
         level = random.randint(selected_encounter.min_level, selected_encounter.max_level)
 
-        # Registrar en pokédex como visto
         Pokedex.objects.get_or_create(
             player=player,
             pokemon=selected_encounter.pokemon,
@@ -84,9 +80,9 @@ class WildPokemonEncounterViewSet(viewsets.ReadOnlyModelViewSet):
                           selected_encounter.pokemon.type2] if selected_encounter.pokemon.type2 else [
                     selected_encounter.pokemon.type1],
                 'sprite_front': selected_encounter.pokemon.sprite_front,
-                'current_hp': 0,  # Se calculará en el frontend
-                'max_hp': 0,  # Se calculará en el frontend
-                'moves': []  # Se poblará con movimientos por nivel
+                'current_hp': 0,
+                'max_hp': 0,
+                'moves': []
             },
             'encounter_id': selected_encounter.id
         })

@@ -1,4 +1,3 @@
-# usuario/api/PlayerPokemonViewSet.py - VERSIÓN MEJORADA
 from rest_framework import viewsets, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response

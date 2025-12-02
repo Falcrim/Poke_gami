@@ -42,7 +42,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Ya elegiste tu Pokémon inicial'}, status=400)
 
         starter_id = request.data.get('starter_id')
-        if starter_id not in [1, 4, 7]:  # Bulbasaur, Charmander, Squirtle
+        if starter_id not in [1, 4, 7]:
             return Response({'error': 'Pokémon inicial inválido'}, status=400)
 
         try:
@@ -53,20 +53,17 @@ class PlayerViewSet(viewsets.ModelViewSet):
 
             starter_pokemon = Pokemon.objects.get(pokedex_id=starter_id)
 
-            # Crear el Pokémon del jugador
             player_pokemon = PlayerPokemon.objects.create(
                 player=player,
                 pokemon=starter_pokemon,
-                level=5,  # Nivel inicial
+                level=5,
                 experience=0
             )
 
-            # Calcular stats
             player_pokemon.calculate_stats()
             player_pokemon.current_hp = player_pokemon.hp
             player_pokemon.save()
 
-            # Aprender movimientos iniciales (nivel <= 5)
             initial_moves = PokemonMove.objects.filter(
                 pokemon=starter_pokemon,
                 level__lte=5
@@ -75,23 +72,19 @@ class PlayerViewSet(viewsets.ModelViewSet):
             for pokemon_move in initial_moves:
                 player_pokemon.moves.add(pokemon_move.move)
 
-            # Marcar como elegido y establecer ubicación inicial
             player.starter_chosen = True
 
-            # Establecer ubicación inicial (Pueblo Paleta)
             from pokemon.models.Location import Location
             starting_location = Location.objects.get(name='Pueblo Paleta')
             player.current_location = starting_location
             player.save()
 
-            # Registrar en la pokédex
             Pokedex.objects.create(
                 player=player,
                 pokemon=starter_pokemon,
                 state='caught'
             )
 
-            # Obtener ubicaciones conectadas para la respuesta
             connected_locations = starting_location.connected_locations.all()
             connected_locations_data = [{
                 'id': loc.id,
@@ -130,14 +123,12 @@ class PlayerViewSet(viewsets.ModelViewSet):
             new_location = Location.objects.get(id=location_id)
             current_location = player.current_location
 
-            # Verificar que la nueva ubicación esté conectada a la actual
             if current_location and new_location not in current_location.connected_locations.all():
                 return Response({'error': 'Ubicación no accesible'}, status=400)
 
             player.current_location = new_location
             player.save()
 
-            # Obtener ubicaciones conectadas para la respuesta
             connected_locations = new_location.connected_locations.all()
             connected_locations_data = [{
                 'id': loc.id,

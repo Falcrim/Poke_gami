@@ -17,7 +17,6 @@ class PlayerPokemon(models.Model):
     order = models.IntegerField(default=0)
     moves = models.ManyToManyField(Move, related_name='player_pokemons')
 
-    # Stats actuales
     hp = models.IntegerField(default=0)
     attack = models.IntegerField(default=0)
     defense = models.IntegerField(default=0)
@@ -83,7 +82,6 @@ class PlayerPokemon(models.Model):
             'just_evolved': self.just_evolved
         }
 
-        # Si evolucionó, actualizar también el Pokémon
         if self.just_evolved:
             update_fields['pokemon'] = self.pokemon
             if not self.nickname:
@@ -91,7 +89,6 @@ class PlayerPokemon(models.Model):
 
         PlayerPokemon.objects.filter(pk=self.pk).update(**update_fields)
 
-        # Resetear flag de evolución si es necesario
         if self.just_evolved:
             self.just_evolved = False
             PlayerPokemon.objects.filter(pk=self.pk).update(just_evolved=False)
@@ -99,31 +96,25 @@ class PlayerPokemon(models.Model):
         return leveled_up
 
     def level_up(self):
-        """Sube de nivel y maneja evolución"""
         old_level = self.level
         self.level += 1
 
         print(f"¡{self.pokemon.name} subió al nivel {self.level}!")
 
-        # Guardar HP actual para calcular la curación
         old_hp_percentage = self.current_hp / self.hp if self.hp > 0 else 0
 
-        # Recalcular stats
         self.calculate_stats()
 
-        # Calcular nueva HP manteniendo el porcentaje de salud
         self.current_hp = int(self.hp * old_hp_percentage)
         if self.current_hp <= 0 and self.hp > 0:
-            self.current_hp = 1  # Asegurar que no quede en 0
+            self.current_hp = 1
 
-        # Verificar evolución
         self.check_evolution()
 
-        # Si evolucionó, curar completamente
         if self.just_evolved:
             self.current_hp = self.hp
             print(f"¡{self.pokemon.name} evolucionó!")
-            
+
             from usuario.models.Pokedex import Pokedex
             Pokedex.objects.get_or_create(
                 player=self.player,
@@ -132,13 +123,10 @@ class PlayerPokemon(models.Model):
             )
 
     def full_heal(self):
-        """Cura completamente al Pokémon sin reordenar"""
         self.current_hp = self.hp
         PlayerPokemon.objects.filter(pk=self.pk).update(current_hp=self.hp)
 
     def check_evolution(self):
-        """Verifica si el Pokémon puede evolucionar"""
-        # Buscar evolución por nivel
         evolution = Pokemon.objects.filter(
             evolves_from=self.pokemon,
             evolution_level__lte=self.level
@@ -174,26 +162,20 @@ class PlayerPokemon(models.Model):
             defaults={'state': 'caught'}
         )
 
-        # Si ya existe pero no está como capturado, actualizar
         if not created and pokedex_entry.state != 'caught':
             pokedex_entry.state = 'caught'
             pokedex_entry.save()
 
     def get_experience_info(self):
-        """Obtiene información detallada sobre la experiencia para la barra de progreso"""
         current_exp = self.experience
 
-        # Experiencia requerida para el nivel ACTUAL
         current_level_exp = self.get_experience_required(self.level)
-        # Experiencia requerida para el SIGUIENTE nivel
         next_level_exp = self.get_experience_required(self.level + 1)
 
-        # Calcular experiencia en el nivel actual y para el siguiente nivel
         exp_in_current_level = current_exp - current_level_exp
         exp_needed_for_next_level = next_level_exp - current_level_exp
         exp_to_next_level = next_level_exp - current_exp
 
-        # Calcular porcentaje de progreso
         if exp_needed_for_next_level > 0:
             progress_percentage = (exp_in_current_level / exp_needed_for_next_level) * 100
         else:
@@ -275,7 +257,6 @@ class PlayerPokemon(models.Model):
                 PlayerPokemon.objects.filter(pk=pokemon.pk).update(order=new_order)
 
     def has_changed_level(self):
-        """Verifica si el nivel cambió"""
         if not self.pk:
             return True
         try:
@@ -285,7 +266,6 @@ class PlayerPokemon(models.Model):
             return True
 
     def get_available_moves(self):
-        """Obtiene todos los movimientos que puede aprender por nivel"""
         from pokemon.models.PokemonMove import PokemonMove
         return PokemonMove.objects.filter(
             pokemon=self.pokemon,
@@ -293,11 +273,9 @@ class PlayerPokemon(models.Model):
         ).select_related('move')
 
     def can_learn_move(self, move):
-        """Verifica si puede aprender un movimiento"""
         return self.get_available_moves().filter(move=move).exists()
 
     def teach_move(self, move):
-        """Enseña un movimiento nuevo (maneja el límite de 4)"""
         if not self.can_learn_move(move):
             raise ValidationError(f"{self.pokemon.name} no puede aprender {move.name}")
 
@@ -309,7 +287,6 @@ class PlayerPokemon(models.Model):
 
         self.moves.add(move)
 
-        # Actualizar moves_pp para el nuevo movimiento
         if not self.moves_pp:
             self.moves_pp = {}
 
@@ -319,7 +296,6 @@ class PlayerPokemon(models.Model):
         return True
 
     def forget_move(self, move):
-        """Olvida un movimiento"""
         if not self.moves.filter(id=move.id).exists():
             raise ValidationError(f"{self.pokemon.name} no conoce {move.name}")
 
@@ -328,7 +304,6 @@ class PlayerPokemon(models.Model):
 
         self.moves.remove(move)
 
-        # Eliminar de moves_pp si existe
         if self.moves_pp and str(move.id) in self.moves_pp:
             del self.moves_pp[str(move.id)]
             self.save(update_fields=['moves_pp'])
@@ -336,11 +311,8 @@ class PlayerPokemon(models.Model):
         return True
 
     def replace_move(self, old_move, new_move):
-        """Reemplaza un movimiento por otro"""
-        # Olvidar el movimiento viejo
         self.forget_move(old_move)
 
-        # Aprender el movimiento nuevo
         self.teach_move(new_move)
 
         return True

@@ -48,7 +48,6 @@ class BattleSerializer(serializers.ModelSerializer):
 class BattleViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
-    # TABLA DE EFECTIVIDAD DE TIPOS (simplificada)
     TYPE_EFFECTIVENESS = {
         'normal': {'rock': 0.5, 'ghost': 0, 'steel': 0.5},
         'fire': {'fire': 0.5, 'water': 0.5, 'grass': 2, 'ice': 2, 'bug': 2, 'rock': 0.5, 'dragon': 0.5, 'steel': 2},
@@ -103,7 +102,6 @@ class BattleViewSet(viewsets.ViewSet):
         wild_special_defense = self.calculate_stat(encounter.pokemon.base_special_defense, wild_level)
         wild_speed = self.calculate_stat(encounter.pokemon.base_speed, wild_level)
 
-        # Obtener movimientos del Pokémon salvaje (por nivel)
         wild_moves = PokemonMove.objects.filter(
             pokemon=encounter.pokemon,
             level__lte=wild_level
@@ -112,7 +110,6 @@ class BattleViewSet(viewsets.ViewSet):
         if not wild_moves:
             return Response({'error': 'El Pokémon salvaje no tiene movimientos'}, status=400)
 
-        # Crear el combate
         with transaction.atomic():
             battle = Battle.objects.create(
                 player=player,
@@ -122,14 +119,12 @@ class BattleViewSet(viewsets.ViewSet):
                 wild_max_hp=wild_hp,
                 player_pokemon=active_pokemon,
                 state='active',
-                turn=0  # Empieza el jugador
+                turn=0
             )
 
-            # Agregar movimientos del Pokémon salvaje
             for pokemon_move in wild_moves:
                 battle.wild_moves.add(pokemon_move.move)
 
-        # Registrar en la Pokédex como visto
         from usuario.models.Pokedex import Pokedex
         Pokedex.objects.get_or_create(
             player=player,
@@ -171,26 +166,21 @@ class BattleViewSet(viewsets.ViewSet):
     def start_trainer_battle(self, request):
         player = request.user.player_profile
 
-        # Verificar que el jugador está en una ubicación válida
         if not player.current_location:
             return Response({'error': 'No estás en ninguna ubicación'}, status=400)
 
-        # Solo permitir en rutas
         if player.current_location.location_type != 'route':
             return Response({'error': 'Solo puedes combatir con entrenadores en rutas'}, status=400)
 
-        # Verificar que el jugador tiene Pokémon vivos
         active_pokemon = player.pokemons.filter(in_team=True, current_hp__gt=0).order_by('order').first()
         if not active_pokemon:
             return Response({'error': 'No tienes Pokémon disponibles para combatir'}, status=400)
 
-        # Generar entrenador aleatorio
         trainer_data = self.generate_random_trainer(player.current_location)
 
         if not trainer_data:
             return Response({'error': 'No se pudo generar un entrenador para esta zona'}, status=400)
 
-        # Crear la batalla
         with transaction.atomic():
             battle = Battle.objects.create(
                 battle_type='trainer',
@@ -203,10 +193,9 @@ class BattleViewSet(viewsets.ViewSet):
                 current_trainer_pokemon=0,
                 player_pokemon=active_pokemon,
                 state='active',
-                turn=0  # Empieza el jugador
+                turn=0
             )
 
-        # Información del primer Pokémon del entrenador
         first_pokemon = trainer_data['team'][0] if trainer_data['team'] else None
 
         return Response({
@@ -234,7 +223,6 @@ class BattleViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def can_start_battle(self, request):
-        """Verificar si el jugador puede iniciar un combate en su ubicación actual"""
         player = request.user.player_profile
 
         if not player.current_location:
@@ -249,7 +237,6 @@ class BattleViewSet(viewsets.ViewSet):
                 'reason': 'Solo puedes combatir en rutas'
             })
 
-        # Verificar que hay Pokémon disponibles en esta ruta
         encounters = WildPokemonEncounter.objects.filter(location=player.current_location)
         if not encounters.exists():
             return Response({
@@ -257,7 +244,6 @@ class BattleViewSet(viewsets.ViewSet):
                 'reason': 'No hay Pokémon salvajes en esta ruta'
             })
 
-        # Verificar que el jugador tiene Pokémon vivos
         active_pokemon = player.pokemons.filter(in_team=True, current_hp__gt=0).exists()
         if not active_pokemon:
             return Response({
@@ -273,7 +259,6 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def get_wild_encounter(self, location_id):
-        """Obtener un encuentro salvaje basado en la rareza"""
         encounters = WildPokemonEncounter.objects.filter(location_id=location_id)
         if not encounters:
             return None
@@ -293,11 +278,9 @@ class BattleViewSet(viewsets.ViewSet):
         return random.choice(weighted_encounters)
 
     def calculate_hp(self, base_hp, level):
-        """Calcular HP basado en stat base y nivel"""
         return int((2 * base_hp * level) / 100) + level + 10
 
     def calculate_stat(self, base_stat, level):
-        """Calcular stat basado en stat base y nivel"""
         return int((2 * base_stat * level) / 100) + 5
 
     @action(detail=True, methods=['post'])
@@ -322,9 +305,7 @@ class BattleViewSet(viewsets.ViewSet):
         with transaction.atomic():
             message = ""
 
-            # TURNO DEL JUGADOR
             if battle.battle_type == 'wild':
-                # Lógica para Pokémon salvaje (existente)
                 damage = self.calculate_damage(
                     battle.player_pokemon,
                     battle.wild_pokemon,
@@ -341,26 +322,22 @@ class BattleViewSet(viewsets.ViewSet):
                     message += f'Causó {damage} de daño.'
                     message += f'(PP: {remaining_pp}/{player_move.pp})'
 
-                # Verificar si el Pokémon salvaje fue derrotado
                 if battle.wild_current_hp <= 0:
                     battle.state = 'won'
                     battle.save()
                     return self.handle_battle_win(battle, message)
 
             if battle.battle_type == 'trainer' :  # battle_type == 'trainer'
-                # Lógica para entrenador
                 current_opponent = battle.current_opponent_pokemon
                 if not current_opponent:
                     return Response({'error': 'No hay Pokémon oponente activo'}, status=400)
 
-                # Calcular daño contra Pokémon del entrenador
                 damage = self.calculate_damage_trainer(
                     battle.player_pokemon,
                     current_opponent,
                     player_move
                 )
 
-                # Actualizar HP del Pokémon del entrenador
                 battle.trainer_team[battle.current_trainer_pokemon]['current_hp'] -= damage
                 battle.trainer_team[battle.current_trainer_pokemon]['current_hp'] = max(
                     0, battle.trainer_team[battle.current_trainer_pokemon]['current_hp']
@@ -373,18 +350,15 @@ class BattleViewSet(viewsets.ViewSet):
                 if damage > 0:
                     message += f'Causó {damage} de daño.'
 
-                # Verificar si el Pokémon del entrenador fue derrotado
                 if battle.trainer_team[battle.current_trainer_pokemon]['current_hp'] <= 0:
                     opponent_name = battle.trainer_team[battle.current_trainer_pokemon]['pokemon_name']
                     message += f' ¡{opponent_name} fue derrotado!'
 
-                    # Verificar si el entrenador fue derrotado
                     if battle.is_trainer_defeated():
                         battle.state = 'won'
                         battle.save()
                         return self.handle_trainer_battle_win(battle, message)
                     else:
-                        # Buscar siguiente Pokémon vivo del entrenador
                         next_index = self.get_next_trainer_pokemon(battle)
                         if next_index is not None:
                             battle.current_trainer_pokemon = next_index
@@ -397,9 +371,7 @@ class BattleViewSet(viewsets.ViewSet):
 
                 battle.save()
 
-            # TURNO DEL OPONENTE (salvaje o entrenador)
             if battle.battle_type == 'wild':
-                # Turno del Pokémon salvaje
                 wild_damage, wild_move = self.wild_attack(battle)
                 battle.player_pokemon.current_hp -= wild_damage
                 battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
@@ -413,7 +385,6 @@ class BattleViewSet(viewsets.ViewSet):
                     message += f'Causó {wild_damage} de daño.'
 
             if battle.battle_type == 'trainer':  # battle_type == 'trainer'
-                # Turno del Pokémon del entrenador
                 current_opponent = battle.current_opponent_pokemon
                 if current_opponent and current_opponent['current_hp'] > 0:
                     trainer_damage, trainer_move = self.trainer_attack(battle)
@@ -453,7 +424,6 @@ class BattleViewSet(viewsets.ViewSet):
             })
 
     def reduce_move_pp(self, player_pokemon, move_id):
-        """Reducir PP de un movimiento durante la batalla"""
         from usuario.models.PlayerPokemon import PlayerPokemon
 
         move_id_str = str(move_id)
@@ -480,7 +450,6 @@ class BattleViewSet(viewsets.ViewSet):
         return player_pokemon.moves_pp[move_id_str]
 
     def get_move_current_pp(self, player_pokemon, move_id):
-        """Obtener PP actual de un movimiento"""
         move_id_str = str(move_id)
 
         if not player_pokemon.moves_pp:
@@ -506,36 +475,30 @@ class BattleViewSet(viewsets.ViewSet):
             return None
 
     def calculate_damage(self, attacker, defender, move, defender_level):
-        """Calcular daño del movimiento"""
         if move.damage_class == 'status':
             return 0
 
-        # Determinar stat de ataque y defensa
         if move.damage_class == 'physical':
             attack_stat = attacker.attack
             defense_stat = self.calculate_stat(defender.base_defense, defender_level)
-        else:  # special
+        else:
             attack_stat = attacker.special_attack
             defense_stat = self.calculate_stat(defender.base_special_defense, defender_level)
 
-        # Fórmula de daño simplificada
         level_factor = (2 * attacker.level) / 5 + 2
         power_factor = move.power if move.power else 0
         stat_factor = attack_stat / defense_stat
 
         base_damage = (level_factor * power_factor * stat_factor) / 50 + 2
 
-        # Modificador de tipo
         type_effectiveness = self.get_type_effectiveness(move.type, [defender.type1, defender.type2])
         base_damage *= type_effectiveness
 
-        # Modificador aleatorio (0.85 - 1.0)
         base_damage *= random.uniform(0.85, 1.0)
 
         return int(max(1, base_damage))
 
     def get_type_effectiveness(self, move_type, defender_types):
-        """Calcular efectividad del tipo"""
         effectiveness = 1.0
         for defender_type in defender_types:
             if defender_type and move_type in self.TYPE_EFFECTIVENESS:
@@ -556,11 +519,10 @@ class BattleViewSet(viewsets.ViewSet):
         if wild_move.damage_class == 'status':
             damage = 0
         else:
-            # Determinar stat de ataque
             if wild_move.damage_class == 'physical':
                 attack_stat = wild_attack
                 defense_stat = battle.player_pokemon.defense
-            else:  # special
+            else:
                 attack_stat = wild_special_attack
                 defense_stat = battle.player_pokemon.special_defense
 
@@ -570,14 +532,12 @@ class BattleViewSet(viewsets.ViewSet):
 
             base_damage = (level_factor * power_factor * stat_factor) / 50 + 2
 
-            # Modificador de tipo
             type_effectiveness = self.get_type_effectiveness(
                 wild_move.type,
                 [battle.player_pokemon.pokemon.type1, battle.player_pokemon.pokemon.type2]
             )
             base_damage *= type_effectiveness
 
-            # Modificador aleatorio
             base_damage *= random.uniform(0.85, 1.0)
 
             damage = int(max(1, base_damage))
@@ -624,30 +584,25 @@ class BattleViewSet(viewsets.ViewSet):
         actual_heal = new_hp - battle.player_pokemon.current_hp
 
         with transaction.atomic():
-            # Usar poción
             setattr(bag, f'{potion_type}s', getattr(bag, f'{potion_type}s') - 1)
             bag.save()
 
-            # CORRECCIÓN: Usar update en lugar de save
             PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
                 current_hp=new_hp
             )
 
-            # Turno del oponente
             if battle.battle_type == 'wild':
                 wild_damage, wild_move = self.wild_attack(battle)
                 battle.player_pokemon.current_hp = new_hp - wild_damage
                 battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
 
-                # CORRECCIÓN: Usar update en lugar de save
                 PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
                     current_hp=battle.player_pokemon.current_hp
                 )
 
                 message = f'Usaste una {potion_type}. Curaste {actual_heal} HP. '
                 message += f'{battle.wild_pokemon.name} usó {wild_move.name}. Causó {wild_damage} de daño.'
-            else:
-                # Para batallas contra entrenador
+            if battle.battle_type == 'trainer':
                 trainer_damage, trainer_move = self.trainer_attack(battle)
                 battle.player_pokemon.current_hp = new_hp - trainer_damage
                 battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
@@ -656,23 +611,19 @@ class BattleViewSet(viewsets.ViewSet):
                     current_hp=battle.player_pokemon.current_hp
                 )
 
-                # Obtener nombre del Pokémon del entrenador actual
                 current_opponent = battle.current_opponent_pokemon
                 opponent_name = current_opponent['pokemon_name'] if current_opponent else 'el oponente'
 
                 message = f'Usaste una {potion_type}. Curaste {actual_heal} HP. '
                 message += f'{opponent_name} usó {trainer_move["name"]}. Causó {trainer_damage} de daño.'
 
-            # Verificar si el Pokémon fue derrotado
             if battle.player_pokemon.current_hp <= 0:
-                # Guardar nombre del Pokémon derrotado
                 defeated_pokemon_name = battle.player_pokemon.pokemon.name
 
                 next_pokemon = self.get_next_available_pokemon(battle.player)
                 if next_pokemon:
                     battle.player_pokemon = next_pokemon
                     battle.save()
-                    # Usar nombres diferentes
                     message += f' {defeated_pokemon_name} fue derrotado. ¡{next_pokemon.pokemon.name} entra al combate!'
                 else:
                     battle.state = 'lost'
@@ -695,11 +646,9 @@ class BattleViewSet(viewsets.ViewSet):
             'ultra_ball': 2.0
         }
 
-        # Verificar que hay pokéballs disponibles
         if getattr(bag, f'{ball_type}s', 0) <= 0:
             return Response({'error': f'No tienes {ball_type}s'}, status=400)
 
-        # Solo se puede usar pokéball en batallas contra Pokémon salvaje
         if battle.battle_type != 'wild':
             return Response({'error': 'No puedes capturar Pokémon de entrenadores'}, status=400)
 
@@ -722,29 +671,24 @@ class BattleViewSet(viewsets.ViewSet):
         print(f"Captura: HP={hp_current}/{hp_max}, Ball={ball_type}, Chance={catch_chance:.2%}")
 
         with transaction.atomic():
-            # Usar pokéball
             setattr(bag, f'{ball_type}s', getattr(bag, f'{ball_type}s') - 1)
             bag.save()
 
             if random.random() < catch_chance:
-                # Captura exitosa
                 battle.state = 'won'
                 battle.save()
                 return self.handle_capture(battle, ball_type)
             else:
-                # El Pokémon escapa
                 shake_check = random.random() < (catch_chance * 0.5)  # Simular "sacudidas" de la pokéball
                 if shake_check:
                     message = f'Usaste una {ball_type}. ¡Casi lo atrapas! El Pokémon escapó del intento.'
                 else:
                     message = f'Usaste una {ball_type}. ¡El Pokémon escapó!'
 
-                # Turno del Pokémon salvaje
                 wild_damage, wild_move = self.wild_attack(battle)
                 battle.player_pokemon.current_hp -= wild_damage
                 battle.player_pokemon.current_hp = max(0, battle.player_pokemon.current_hp)
 
-                # CORRECCIÓN: Usar update en lugar de save
                 PlayerPokemon.objects.filter(pk=battle.player_pokemon.pk).update(
                     current_hp=battle.player_pokemon.current_hp
                 )
@@ -776,7 +720,6 @@ class BattleViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def switch_pokemon(self, request, pk=None):
-        """Cambiar de Pokémon durante el combate"""
         battle = self.get_battle(pk, request.user)
         if not battle or not battle.is_active:
             return Response({'error': 'Combate no encontrado o ya terminado'}, status=404)
@@ -799,13 +742,11 @@ class BattleViewSet(viewsets.ViewSet):
             battle.player_pokemon = new_pokemon
             battle.save()
 
-            # Turno del oponente
             if battle.battle_type == 'wild':
                 wild_damage, wild_move = self.wild_attack(battle)
                 new_pokemon.current_hp -= wild_damage
                 new_pokemon.current_hp = max(0, new_pokemon.current_hp)
 
-                # ACTUALIZACIÓN: Usar update para evitar reordenamiento
                 PlayerPokemon.objects.filter(pk=new_pokemon.pk).update(
                     current_hp=new_pokemon.current_hp
                 )
@@ -856,7 +797,7 @@ class BattleViewSet(viewsets.ViewSet):
 
         # Siempre se puede huir de Pokémon salvajes
         # Para entrenadores, podría haber penalización o no permitirse
-        #if battle.battle_type == 'trainer':
+        if battle.battle_type == 'trainer':
             # Podrías decidir no permitir huir de entrenadores
             # battle.state = 'fled'
             # battle.save()
@@ -865,7 +806,7 @@ class BattleViewSet(viewsets.ViewSet):
             #     'battle_ended': True,
             #     'fled': True
             # })
-        #    return Response({'error': 'No puedes huir de un combate contra entrenador'}, status=400)
+            return Response({'error': 'No puedes huir de un combate contra entrenador'}, status=400)
 
         battle.state = 'fled'
         battle.save()
@@ -877,34 +818,26 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def handle_battle_win(self, battle, message):
-        """Manejar victoria en combate"""
-        # Otorgar experiencia
         experience_gained = battle.wild_level * 10
 
-        # Guardar estado original para el mensaje
         original_level = battle.player_pokemon.level
         original_pokemon_name = battle.player_pokemon.pokemon.name
 
-        # ACTUALIZACIÓN: Recargar el Pokémon desde la base de datos para asegurar datos frescos
         from usuario.models.PlayerPokemon import PlayerPokemon
         player_pokemon = PlayerPokemon.objects.get(pk=battle.player_pokemon.pk)
 
-        # Agregar experiencia (puede causar subida de nivel y evolución)
         leveled_up = player_pokemon.add_experience(experience_gained)
 
-        # Otorgar dinero
         money_gained = battle.wild_level * 5
         battle.player.money += money_gained
         battle.player.save()
 
-        # Construir mensaje detallado
         victory_message = f'{message} ¡Has derrotado al {battle.wild_pokemon.name} salvaje! '
         victory_message += f'Ganaste {experience_gained} de experiencia y ${money_gained}.'
 
         if leveled_up:
             victory_message += f' ¡{original_pokemon_name} subió al nivel {player_pokemon.level}!'
 
-            # Verificar si evolucionó
             if player_pokemon.just_evolved:
                 victory_message += f' ¡Y evolucionó a {player_pokemon.pokemon.name}!'
 
@@ -921,10 +854,7 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def handle_battle_loss(self, battle, message):
-        """Manejar derrota en combate"""
-        # Transportar al último pueblo
         last_town = battle.player.current_location
-        # Buscar el primer pueblo disponible si no está en uno
         if not last_town or last_town.location_type != 'town':
             from pokemon.models.Location import Location
             last_town = Location.objects.filter(location_type='town').first()
@@ -932,7 +862,6 @@ class BattleViewSet(viewsets.ViewSet):
         battle.player.current_location = last_town
         battle.player.save()
 
-        # ACTUALIZACIÓN: Curar todos los Pokémon usando update para evitar reordenamiento
         from usuario.models.PlayerPokemon import PlayerPokemon
         PlayerPokemon.objects.filter(player=battle.player).update(current_hp=models.F('hp'))
 
@@ -949,7 +878,7 @@ class BattleViewSet(viewsets.ViewSet):
             pokemon=battle.wild_pokemon,
             level=battle.wild_level,
             experience=0,
-            in_team=False  # Va a la reserva
+            in_team=False
         )
         new_pokemon.calculate_stats()
 
@@ -1021,7 +950,6 @@ class BattleViewSet(viewsets.ViewSet):
         else:
             current_opponent = battle.current_opponent_pokemon
 
-            # Contar Pokémon vivos del entrenador
             alive_pokemon = sum(1 for p in battle.trainer_team if p['current_hp'] > 0)
 
             return {
@@ -1045,8 +973,6 @@ class BattleViewSet(viewsets.ViewSet):
             }
 
     def generate_random_trainer(self, location):
-        """Genera un entrenador aleatorio con equipo basado en la ubicación"""
-        # Listas de nombres de entrenadores por tipo
         trainer_names_by_type = {
             'beginner': ['Alex', 'Sofía', 'Leo', 'Emma', 'Luis', 'Ana'],
             'intermediate': ['Entrenador Marcos', 'Entrenadora Carla', 'Rival Diego', 'Rival Elena'],
@@ -1054,7 +980,6 @@ class BattleViewSet(viewsets.ViewSet):
             'gym_leader': ['Líder Brock', 'Líder Misty', 'Líder Lt. Surge', 'Líder Erika'],
         }
 
-        # Sprites para entrenadores (puedes usar URLs a imágenes)
         trainer_sprites = {
             'beginner': 'https://example.com/trainer_beginner.png',
             'intermediate': 'https://example.com/trainer_intermediate.png',
@@ -1062,15 +987,12 @@ class BattleViewSet(viewsets.ViewSet):
             'gym_leader': 'https://example.com/trainer_gym_leader.png',
         }
 
-        # Determinar tipo de entrenador basado en probabilidad
         trainer_types = ['beginner', 'intermediate', 'advanced', 'gym_leader']
-        weights = [0.4, 0.3, 0.2, 0.1]  # Probabilidades
+        weights = [0.4, 0.3, 0.2, 0.1]
         trainer_type = random.choices(trainer_types, weights=weights)[0]
 
-        # Seleccionar nombre aleatorio
         name = random.choice(trainer_names_by_type[trainer_type])
 
-        # Diálogos
         dialogues = {
             'beginner': f"¡Hola! Soy {name}, un entrenador principiante. ¡Prepárate para luchar!",
             'intermediate': f"Soy {name}. Mi equipo está bien entrenado. ¡No será fácil!",
@@ -1078,13 +1000,11 @@ class BattleViewSet(viewsets.ViewSet):
             'gym_leader': f"¡Soy {name}! Para pasar, tendrás que derrotar a mi poderoso equipo.",
         }
 
-        # Generar equipo basado en Pokémon de la ubicación
         team = self.generate_trainer_team(location, trainer_type)
 
         if not team:
             return None
 
-        # Recompensa de dinero basada en tipo y tamaño del equipo
         base_reward = {
             'beginner': 50,
             'intermediate': 100,
@@ -1104,17 +1024,14 @@ class BattleViewSet(viewsets.ViewSet):
         }
 
     def generate_trainer_team(self, location, trainer_type):
-        """Genera un equipo de Pokémon para el entrenador"""
         from pokemon.models.WildPokemonEncounter import WildPokemonEncounter
         from pokemon.models.PokemonMove import PokemonMove
 
-        # Obtener Pokémon disponibles en esta ubicación
         encounters = WildPokemonEncounter.objects.filter(location=location)
 
         if not encounters:
             return []
 
-        # Determinar tamaño del equipo según tipo de entrenador
         team_sizes = {
             'beginner': (1, 2),
             'intermediate': (2, 3),
@@ -1125,7 +1042,6 @@ class BattleViewSet(viewsets.ViewSet):
         min_size, max_size = team_sizes[trainer_type]
         team_size = random.randint(min_size, max_size)
 
-        # Niveles base por tipo de entrenador
         base_levels = {
             'beginner': (3, 7),
             'intermediate': (8, 15),
@@ -1136,25 +1052,20 @@ class BattleViewSet(viewsets.ViewSet):
         min_level, max_level = base_levels[trainer_type]
 
         team = []
-        used_pokemon_ids = set()  # Para evitar Pokémon duplicados en el equipo
+        used_pokemon_ids = set()
 
         for _ in range(team_size):
-            # Seleccionar Pokémon basado en rareza
             encounter = self.select_weighted_encounter(encounters)
 
-            # Evitar duplicados si es posible
             if encounter.pokemon.id in used_pokemon_ids:
-                # Buscar otro Pokémon
                 available_encounters = [e for e in encounters if e.pokemon.id not in used_pokemon_ids]
                 if available_encounters:
                     encounter = self.select_weighted_encounter(available_encounters)
 
             used_pokemon_ids.add(encounter.pokemon.id)
 
-            # Determinar nivel
             level = random.randint(min_level, max_level)
 
-            # Calcular stats
             hp = self.calculate_hp(encounter.pokemon.base_hp, level)
             attack = self.calculate_stat(encounter.pokemon.base_attack, level)
             defense = self.calculate_stat(encounter.pokemon.base_defense, level)
@@ -1162,13 +1073,11 @@ class BattleViewSet(viewsets.ViewSet):
             special_defense = self.calculate_stat(encounter.pokemon.base_special_defense, level)
             speed = self.calculate_stat(encounter.pokemon.base_speed, level)
 
-            # Obtener movimientos (hasta 4)
             wild_moves = PokemonMove.objects.filter(
                 pokemon=encounter.pokemon,
                 level__lte=level
             ).select_related('move').order_by('-level')[:4]
 
-            # Construir objeto del Pokémon
             pokemon_data = {
                 'pokemon_id': encounter.pokemon.id,
                 'pokemon_name': encounter.pokemon.name,
@@ -1203,7 +1112,6 @@ class BattleViewSet(viewsets.ViewSet):
         return team
 
     def select_weighted_encounter(self, encounters):
-        """Selecciona un encuentro basado en la rareza"""
         rarity_weights = {
             'common': 60,
             'uncommon': 30,
@@ -1219,7 +1127,6 @@ class BattleViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def can_start_trainer_battle(self, request):
-        """Verificar si el jugador puede iniciar un combate con entrenador"""
         player = request.user.player_profile
 
         if not player.current_location:
@@ -1234,7 +1141,6 @@ class BattleViewSet(viewsets.ViewSet):
                 'reason': 'Solo puedes combatir con entrenadores en rutas'
             })
 
-        # Verificar que hay Pokémon disponibles en esta ruta
         from pokemon.models.WildPokemonEncounter import WildPokemonEncounter
         encounters = WildPokemonEncounter.objects.filter(location=player.current_location)
         if not encounters.exists():
@@ -1243,7 +1149,6 @@ class BattleViewSet(viewsets.ViewSet):
                 'reason': 'No hay Pokémon disponibles en esta ruta para generar entrenadores'
             })
 
-        # Verificar que el jugador tiene Pokémon vivos
         active_pokemon = player.pokemons.filter(in_team=True, current_hp__gt=0).exists()
         if not active_pokemon:
             return Response({
@@ -1259,11 +1164,9 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def calculate_damage_trainer(self, attacker, defender_data, move):
-        """Calcular daño contra Pokémon del entrenador"""
         if move.damage_class == 'status':
             return 0
 
-        # Determinar stat de ataque y defensa
         if move.damage_class == 'physical':
             attack_stat = attacker.attack
             defense_stat = defender_data['defense']
@@ -1277,7 +1180,6 @@ class BattleViewSet(viewsets.ViewSet):
 
         base_damage = (level_factor * power_factor * stat_factor) / 50 + 2
 
-        # Modificador de tipo
         defender_types = [defender_data['type1']]
         if defender_data.get('type2'):
             defender_types.append(defender_data['type2'])
@@ -1285,27 +1187,22 @@ class BattleViewSet(viewsets.ViewSet):
         type_effectiveness = self.get_type_effectiveness(move.type, defender_types)
         base_damage *= type_effectiveness
 
-        # Modificador aleatorio (0.85 - 1.0)
         base_damage *= random.uniform(0.85, 1.0)
 
         return int(max(1, base_damage))
 
     def trainer_attack(self, battle):
-        """El Pokémon del entrenador ataca"""
         if battle.battle_type != 'trainer':
             return 0, {'name': 'Tackle', 'type': 'normal'}
 
         current_pokemon = battle.trainer_team[battle.current_trainer_pokemon]
 
-        # Seleccionar un movimiento aleatorio del Pokémon
         available_moves = current_pokemon['moves']
         if not available_moves:
-            # Si no tiene movimientos, crear uno básico
             return 0, {'name': 'Tackle', 'type': 'normal'}
 
         move = random.choice(available_moves)
 
-        # Calcular daño
         damage = self.calculate_damage_trainer_reverse(
             current_pokemon,
             battle.player_pokemon,
@@ -1315,10 +1212,8 @@ class BattleViewSet(viewsets.ViewSet):
         return damage, move
 
     def calculate_damage_trainer_reverse(self, attacker_data, defender, move_dict):
-        """Calcular daño que hace el Pokémon del entrenador al jugador"""
         from pokemon.models.Move import Move
 
-        # Crear un objeto Move temporal
         move = Move(
             name=move_dict['name'],
             type=move_dict['type'],
@@ -1330,7 +1225,6 @@ class BattleViewSet(viewsets.ViewSet):
         if move.damage_class == 'status':
             return 0
 
-        # Determinar stat de ataque y defensa
         if move.damage_class == 'physical':
             attack_stat = attacker_data['attack']
             defense_stat = defender.defense
@@ -1344,7 +1238,6 @@ class BattleViewSet(viewsets.ViewSet):
 
         base_damage = (level_factor * power_factor * stat_factor) / 50 + 2
 
-        # Modificador de tipo
         defender_types = [defender.pokemon.type1]
         if defender.pokemon.type2:
             defender_types.append(defender.pokemon.type2)
@@ -1352,42 +1245,32 @@ class BattleViewSet(viewsets.ViewSet):
         type_effectiveness = self.get_type_effectiveness(move.type, defender_types)
         base_damage *= type_effectiveness
 
-        # Modificador aleatorio (0.85 - 1.0)
         base_damage *= random.uniform(0.85, 1.0)
 
         return int(max(1, base_damage))
 
     def get_next_trainer_pokemon(self, battle):
-        """Obtener el índice del siguiente Pokémon vivo del entrenador"""
         for i, pokemon in enumerate(battle.trainer_team):
             if pokemon['current_hp'] > 0:
                 return i
         return None
 
     def handle_trainer_battle_win(self, battle, message):
-        """Manejar victoria contra entrenador"""
-        # Otorgar experiencia a todos los Pokémon que participaron
-        # Aquí solo damos experiencia al Pokémon activo por simplicidad
-        base_experience = 100  # Base por Pokémon derrotado
+        base_experience = 100
         total_experience = 0
 
-        # Sumar experiencia por cada Pokémon derrotado
         for pokemon in battle.trainer_team:
-            if pokemon['current_hp'] <= 0:  # Pokémon derrotado
+            if pokemon['current_hp'] <= 0:
                 total_experience += base_experience * pokemon['level'] // 10
 
-        # Guardar estado original para el mensaje
         original_level = battle.player_pokemon.level
 
-        # Agregar experiencia (puede causar subida de nivel y evolución)
         leveled_up = battle.player_pokemon.add_experience(total_experience)
 
-        # Otorgar dinero
         money_gained = battle.trainer_money_reward
         battle.player.money += money_gained
         battle.player.save()
 
-        # Construir mensaje detallado
         victory_message = f'{message} ¡Has derrotado a {battle.trainer_name}! '
         victory_message += f'Ganaste ${money_gained} y {total_experience} de experiencia.'
 
@@ -1406,21 +1289,16 @@ class BattleViewSet(viewsets.ViewSet):
         })
 
     def handle_trainer_battle_loss(self, battle, message):
-        """Manejar derrota contra entrenador"""
-        # Transportar al último pueblo
         from pokemon.models.Location import Location
         last_town = battle.player.current_location
 
-        # Buscar el primer pueblo disponible si no está en uno
         if not last_town or last_town.location_type != 'town':
             last_town = Location.objects.filter(location_type='town').first()
 
         battle.player.current_location = last_town
         battle.player.save()
 
-        # Curar todos los Pokémon usando update para evitar reordenamiento
         from usuario.models.PlayerPokemon import PlayerPokemon
-        # CORRECCIÓN: Usar models.F en lugar de F directamente
         PlayerPokemon.objects.filter(player=battle.player).update(current_hp=models.F('hp'))
 
         return Response({

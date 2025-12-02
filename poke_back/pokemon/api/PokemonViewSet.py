@@ -36,7 +36,6 @@ class PokemonViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = Pokemon.objects.all()
-        # Filtrar por tipo si se especifica
         pokemon_type = self.request.query_params.get('type')
         if pokemon_type:
             queryset = queryset.filter(type1=pokemon_type) | queryset.filter(type2=pokemon_type)
@@ -44,12 +43,10 @@ class PokemonViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def starters(self, request):
-        """Obtener información de los Pokémon iniciales"""
         starters = Pokemon.objects.filter(pokedex_id__in=[1, 4, 7])
 
         starter_data = []
         for starter in starters:
-            # Obtener movimientos iniciales (nivel <= 5)
             initial_moves = PokemonMove.objects.filter(
                 pokemon=starter,
                 level__lte=5
@@ -67,7 +64,6 @@ class PokemonViewSet(viewsets.ReadOnlyModelViewSet):
                     'level_learned': move.level
                 })
 
-            # CORRECCIÓN: Buscar la evolución usando evolves_from
             evolved_pokemon = Pokemon.objects.filter(evolves_from=starter).first()
 
             starter_data.append({

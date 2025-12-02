@@ -13,7 +13,7 @@ class ShopItem(models.Model):
     item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
     price = models.IntegerField()
     description = models.TextField()
-    effect_value = models.IntegerField(default=0)  # Para pociones: HP curado, para pokeballs: tasa captura
+    effect_value = models.IntegerField(default=0)
 
     class Meta:
         db_table = 'shop_items'

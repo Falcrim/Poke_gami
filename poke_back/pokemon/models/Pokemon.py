@@ -28,7 +28,6 @@ class Pokemon(models.Model):
     type1 = models.CharField(max_length=10, choices=POKEMON_TYPES)
     type2 = models.CharField(max_length=10, choices=POKEMON_TYPES, blank=True, null=True)
 
-    # Stats base
     base_hp = models.IntegerField()
     base_attack = models.IntegerField()
     base_defense = models.IntegerField()
@@ -36,14 +35,11 @@ class Pokemon(models.Model):
     base_special_defense = models.IntegerField()
     base_speed = models.IntegerField()
 
-    # Experiencia
-    experience_growth = models.IntegerField()  # Experiencia base para nivel 100
+    experience_growth = models.IntegerField()
 
-    # Evolución
     evolves_from = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
     evolution_level = models.IntegerField(null=True, blank=True)
 
-    # Sprites
     sprite_front = models.URLField()
     sprite_back = models.URLField()
 

@@ -10,7 +10,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Cargando encuentros de Pokémon salvajes para todas las rutas...')
 
-        # Distribución completa por rutas (basada en Pokémon Rojo/Azul)
         route_distributions = {
             'Ruta 1': [
                 (16, 2, 5, 'common'),  # Pidgey

@@ -22,7 +22,6 @@ class TrainerViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Solo mostrar entrenadores en la ubicación actual del jugador
         player = self.request.user.player_profile
         if player.current_location:
             return Trainer.objects.filter(location=player.current_location)
@@ -30,29 +29,23 @@ class TrainerViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def challenge(self, request, pk=None):
-        """Desafiar a un entrenador a un combate"""
         player = request.user.player_profile
         trainer = self.get_object()
 
-        # Verificar que el jugador esté en la misma ubicación
         if player.current_location != trainer.location:
             return Response({'error': 'El entrenador no está en tu ubicación actual'}, status=400)
 
-        # Verificar que es una ruta (no pueblo)
         if trainer.location.location_type != 'route':
             return Response({'error': 'Solo puedes combatir con entrenadores en rutas'}, status=400)
 
-        # Verificar que el jugador tiene Pokémon vivos
         active_pokemon = player.pokemons.filter(in_team=True, current_hp__gt=0).order_by('order').first()
         if not active_pokemon:
             return Response({'error': 'No tienes Pokémon disponibles para combatir'}, status=400)
 
-        # Generar equipo del entrenador
         trainer_team = trainer.generate_team()
         if not trainer_team:
             return Response({'error': 'No se pudo generar el equipo del entrenador'}, status=400)
 
-        # Convertir equipo a formato JSON serializable
         serializable_team = []
         for pokemon_data in trainer_team:
             pokemon_dict = {
@@ -84,7 +77,6 @@ class TrainerViewSet(viewsets.ReadOnlyModelViewSet):
             }
             serializable_team.append(pokemon_dict)
 
-        # Crear la batalla
         from usuario.models.Battle import Battle
         battle = Battle.objects.create(
             battle_type='trainer',
@@ -94,7 +86,7 @@ class TrainerViewSet(viewsets.ReadOnlyModelViewSet):
             current_trainer_pokemon_index=0,
             player_pokemon=active_pokemon,
             state='active',
-            turn=0  # Empieza el jugador
+            turn=0
         )
 
         return Response({
@@ -120,7 +112,6 @@ class TrainerViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'])
     def available_in_location(self, request):
-        """Obtener entrenadores disponibles en la ubicación actual"""
         player = request.user.player_profile
 
         if not player.current_location:
