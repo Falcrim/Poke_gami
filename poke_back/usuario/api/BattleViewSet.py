@@ -591,7 +591,6 @@ class BattleViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def use_item(self, request, pk=None):
-        """Usar un item de la mochila en combate"""
         battle = self.get_battle(pk, request.user)
         if not battle or not battle.is_active:
             return Response({'error': 'Combate no encontrado o ya terminado'}, status=404)

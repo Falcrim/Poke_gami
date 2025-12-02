@@ -213,6 +213,16 @@ class PlayerPokemon(models.Model):
             if not self.current_hp or self.current_hp > self.hp:
                 self.current_hp = self.hp
 
+
+
+        if not self.just_evolved and self.pk:
+            current_just_evolved = PlayerPokemon.objects.filter(pk=self.pk).values_list('just_evolved',
+                                                                                        flat=True).first()
+            if current_just_evolved and not self.just_evolved:
+                self.just_evolved = False
+
+        super().save(*args, **kwargs)
+
         if not self.moves_pp:
             self.moves_pp = {}
 
@@ -231,14 +241,6 @@ class PlayerPokemon(models.Model):
 
             for key in keys_to_remove:
                 del self.moves_pp[key]
-
-        if not self.just_evolved and self.pk:
-            current_just_evolved = PlayerPokemon.objects.filter(pk=self.pk).values_list('just_evolved',
-                                                                                        flat=True).first()
-            if current_just_evolved and not self.just_evolved:
-                self.just_evolved = False
-
-        super().save(*args, **kwargs)
 
         if self.in_team and not skip_reorder:
             self._reorder_team()
