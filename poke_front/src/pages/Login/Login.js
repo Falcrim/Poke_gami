@@ -28,7 +28,6 @@ const Login = ({ onLogin }) => {
       const data = await login(formData.username, formData.password);
       onLogin(data.user);
       
-      // Redirigir basado en si ya eligió starter o no
       if (!data.user.player_info.starter_chosen) {
         navigate('/starter-selection');
       } else {

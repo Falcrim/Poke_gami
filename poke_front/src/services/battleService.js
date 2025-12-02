@@ -1,7 +1,5 @@
-// services/battleService.js
 import { apiRequest } from './api';
 
-// Funciones de combate
 export const startWildBattle = async () => {
   return await apiRequest('/auth/battles/start_wild_battle/', {
     method: 'POST',
@@ -40,7 +38,6 @@ export const fleeBattle = async (battleId) => {
   });
 };
 
-// Función opcional para obtener detalles del combate
 export const getBattleDetails = async (battleId) => {
   return await apiRequest(`/auth/battles/${battleId}/`);
 };

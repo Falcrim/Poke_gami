@@ -56,7 +56,6 @@
   z-index: 2;
 }
 
-/* Imagen del Pokémon - misma posición para conocidos y desconocidos */
 .pokemon-sprite {
   width: 96px;
   height: 96px;
@@ -140,7 +139,6 @@
   font-size: 0.8rem;
 }
 
-/* Header de estadísticas de la Pokédex */
 .pokedex-header {
   background: rgba(44, 62, 80, 0.9);
   padding: 2rem;
@@ -184,7 +182,6 @@
   text-transform: uppercase;
 }
 
-/* Barra de progreso */
 .pokedex-progress {
   background: rgba(52, 73, 94, 0.6);
   padding: 1.5rem;
@@ -271,7 +268,6 @@
   color: white;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .pokedex {
     padding: 1rem;

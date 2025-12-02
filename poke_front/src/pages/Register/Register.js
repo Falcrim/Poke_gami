@@ -26,18 +26,14 @@ const Register = ({ onLogin }) => {
     setError('');
 
     try {
-      // 1. Registrar el usuario
       await register(formData.username, formData.email, formData.password);
       
-      // 2. Hacer login automáticamente
       const loginData = await login(formData.username, formData.password);
       
-      // 3. Pasar el usuario al App.js
       if (onLogin) {
         onLogin(loginData.user);
       }
       
-      // 4. Redirigir DIRECTAMENTE a selección de starter
       navigate('/starter-selection', { replace: true });
       
     } catch (err) {

@@ -14,7 +14,9 @@ import {
   getTeamOrder,
   movePokemonToPosition,
   getCurrentUser,
-  getBag
+  getBag,
+  teachMove,
+  forgetMove
 } from '../../services/gameService';
 import './GameScreen.css';
 
@@ -30,13 +32,11 @@ const GameScreen = () => {
   const [bag, setBag] = useState(null);
   const navigate = useNavigate();
 
-  // Estado para las pestañas de ciudad
   const [activeCityTab, setActiveCityTab] = useState('pokemon-center');
   const [activeTeamTab, setActiveTeamTab] = useState('team');
   const [shopItems, setShopItems] = useState([]);
   const [shopLoading, setShopLoading] = useState(false);
 
-  // Estado para los datos de Pokémon
   const [teamData, setTeamData] = useState({ team: [], team_count: 0, max_team_size: 6 });
   const [teamReserveData, setTeamReserveData] = useState({ team: [], reserve: [], team_count: 0, reserve_count: 0, max_team_size: 6 });
 
@@ -45,12 +45,12 @@ const GameScreen = () => {
   const [buying, setBuying] = useState(null);
   const [healingAnimation, setHealingAnimation] = useState(false);
 
-  // Estado para drag and drop
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
-  // Estado para detalles del Pokémon
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [pokemonDetailTab, setPokemonDetailTab] = useState('stats');
+  const [teachingMove, setTeachingMove] = useState(false);
+  const [forgettingMove, setForgettingMove] = useState(false);
 
   useEffect(() => {
     const fetchGameData = async () => {
@@ -87,7 +87,6 @@ const GameScreen = () => {
     fetchGameData();
   }, []);
 
-  // Cargar datos cuando estés en una ciudad
   useEffect(() => {
     if (currentLocation?.location_type === 'town') {
       fetchShopItems();
@@ -109,7 +108,6 @@ const GameScreen = () => {
     }
   };
 
-  // IMPORTANTE: Usar getTeamOrder() para el equipo en Centro Pokémon
   const fetchTeamData = async () => {
     try {
       setTeamLoading(true);
@@ -123,7 +121,6 @@ const GameScreen = () => {
     }
   };
 
-  // IMPORTANTE: Usar getTeamAndReserve() para equipo y reserva
   const fetchTeamAndReserveData = async () => {
     try {
       const data = await getTeamAndReserve();
@@ -155,7 +152,6 @@ const GameScreen = () => {
       setCurrentLocation(newLocation);
       setConnectedLocations(travelResult.connected_locations);
 
-      // Actualizar dinero después de viajar
       const userData = await getCurrentUser();
       setUserMoney(userData.player_info?.money || 0);
 
@@ -175,13 +171,10 @@ const GameScreen = () => {
 
       await healTeam();
 
-      // Mostrar animación de curación
       setTimeout(async () => {
-        // Recargar los datos después de la animación
         await fetchTeamData();
         await fetchTeamAndReserveData();
 
-        // Actualizar usuario para ver dinero actualizado
         const userData = await getCurrentUser();
         setUserMoney(userData.player_info?.money || 0);
 
@@ -212,14 +205,12 @@ const GameScreen = () => {
 
       const result = await buyItem(itemId);
 
-      // Recargar datos
       await fetchShopItems();
       const userData = await getCurrentUser();
       setUserMoney(userData.player_info?.money || 0);
       const bagData = await getBag();
       setBag(bagData[0]);
 
-      // Mostrar mensaje de éxito
       setError(`¡${itemName} comprado exitosamente por $${itemPrice}! Saldo restante: $${userData.player_info?.money || 0}`);
       setTimeout(() => setError(''), 3000);
 
@@ -234,7 +225,6 @@ const GameScreen = () => {
   const handleMoveToReserve = async (pokemonId, pokemonName) => {
     try {
       await moveToReserve(pokemonId);
-      // Recargar ambos datos
       await fetchTeamData();
       await fetchTeamAndReserveData();
       setError(`${pokemonName} movido a la reserva`);
@@ -254,7 +244,6 @@ const GameScreen = () => {
 
     try {
       await moveToTeam(pokemonId);
-      // Recargar ambos datos
       await fetchTeamData();
       await fetchTeamAndReserveData();
       setError(`${pokemonName} movido al equipo`);
@@ -265,7 +254,6 @@ const GameScreen = () => {
     }
   };
 
-  // Funciones para drag and drop (reordenar equipo)
   const handleDragStart = (e, pokemonId) => {
     e.dataTransfer.setData('pokemonId', pokemonId.toString());
     e.currentTarget.style.opacity = '0.4';
@@ -385,16 +373,92 @@ const GameScreen = () => {
     setSelectedPokemon(null);
   };
 
-  // Renderizar Pokémon salvajes de la ubicación actual
+  const handleTeachMove = async (moveId, moveName) => {
+    if (!selectedPokemon || teachingMove) return;
+
+    try {
+      setTeachingMove(true);
+      setError('');
+
+      const result = await teachMove(selectedPokemon.id, moveId);
+
+      const updatedPokemon = { ...selectedPokemon };
+      updatedPokemon.moves = result.current_moves || [];
+      
+      if (selectedPokemon.available_moves) {
+        const learnedMove = selectedPokemon.available_moves.find(move => move.id === moveId);
+        if (learnedMove) {
+          const moveDetail = {
+            id: learnedMove.id,
+            name: learnedMove.name,
+            type: learnedMove.type,
+            power: learnedMove.power,
+            accuracy: learnedMove.accuracy,
+            pp: learnedMove.pp,
+            current_pp: learnedMove.pp,
+            damage_class: learnedMove.damage_class
+          };
+          
+          updatedPokemon.moves_details = [...(selectedPokemon.moves_details || []), moveDetail];
+        }
+      }
+
+      setSelectedPokemon(updatedPokemon);
+      setError(`¡${selectedPokemon.nickname || selectedPokemon.pokemon_name} aprendió ${moveName}!`);
+      setTimeout(() => setError(''), 3000);
+
+      await fetchTeamData();
+      await fetchTeamAndReserveData();
+
+    } catch (err) {
+      setError(err.message || 'Error al enseñar el movimiento');
+      console.error('Error teaching move:', err);
+    } finally {
+      setTeachingMove(false);
+    }
+  };
+
+  const handleForgetMove = async (moveId, moveName) => {
+    if (!selectedPokemon || forgettingMove) return;
+
+    if (selectedPokemon.moves_details && selectedPokemon.moves_details.length <= 1) {
+      setError('El Pokémon necesita tener al menos un movimiento');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      setForgettingMove(true);
+      setError('');
+
+      const result = await forgetMove(selectedPokemon.id, moveId);
+
+      const updatedPokemon = { ...selectedPokemon };
+      updatedPokemon.moves = result.current_moves || [];
+      updatedPokemon.moves_details = (selectedPokemon.moves_details || []).filter(move => move.id !== moveId);
+
+      setSelectedPokemon(updatedPokemon);
+      setError(`¡${selectedPokemon.nickname || selectedPokemon.pokemon_name} olvidó ${moveName}!`);
+      setTimeout(() => setError(''), 3000);
+
+      await fetchTeamData();
+      await fetchTeamAndReserveData();
+
+    } catch (err) {
+      setError(err.message || 'Error al olvidar el movimiento');
+      console.error('Error forgetting move:', err);
+    } finally {
+      setForgettingMove(false);
+    }
+  };
+
   const renderWildPokemons = () => {
     if (!currentLocation || currentLocation.location_type === 'town' || !currentLocation.wild_pokemons || currentLocation.wild_pokemons.length === 0) {
       return null;
     }
 
     return (
-
       <div className="wild-pokemons-section">
-
         <div className="battle-options">
           <button
             className="battle-btn wild-pokemon-btn"
@@ -460,7 +524,6 @@ const GameScreen = () => {
     );
   };
 
-  // Renderizar Centro Pokémon - Usando teamData de getTeamOrder()
   const renderPokemonCenter = () => {
     console.log('Rendering Pokemon Center with teamData:', teamData);
 
@@ -536,7 +599,6 @@ const GameScreen = () => {
     );
   };
 
-  // Renderizar Tienda Pokémon
   const renderPokemonShop = () => {
     const getItemCount = (itemType) => {
       if (!bag || !bag.item_summary) return 0;
@@ -620,7 +682,6 @@ const GameScreen = () => {
     );
   };
 
-  // Renderizar Equipo - Usando teamReserveData.team de getTeamAndReserve()
   const renderTeam = () => {
     console.log('Rendering Team with teamReserveData:', teamReserveData);
 
@@ -699,7 +760,6 @@ const GameScreen = () => {
               </div>
             ))}
 
-            {/* Espacios vacíos en el equipo */}
             {Array.from({ length: max_team_size - team_count }, (_, index) => (
               <div key={`empty-${index}`} className="pokemon-card empty-slot">
                 <div className="empty-slot-content">
@@ -715,7 +775,6 @@ const GameScreen = () => {
     );
   };
 
-  // Renderizar Reserva - Usando teamReserveData.reserve de getTeamAndReserve()
   const renderReserve = () => {
     console.log('Rendering Reserve with teamReserveData:', teamReserveData);
 
@@ -787,7 +846,6 @@ const GameScreen = () => {
     );
   };
 
-  // Renderizar Equipo y Reserva con pestañas
   const renderTeamAndReserve = () => {
     return (
       <div className="team-reserve-tab">
@@ -813,7 +871,6 @@ const GameScreen = () => {
     );
   };
 
-  // Renderizar pestañas de ciudad
   const renderCityServices = () => {
     if (currentLocation?.location_type !== 'town') return null;
 
@@ -849,7 +906,116 @@ const GameScreen = () => {
     );
   };
 
-  // Modal de detalles del Pokémon (COMPLETO - similar al dashboard)
+  const renderLearnedMoves = () => {
+    if (!selectedPokemon) return null;
+
+    const movesDetails = selectedPokemon.moves_details || [];
+    const emptySlots = 4 - movesDetails.length;
+
+    return (
+      <div className="learned-moves-section">
+        <h4>Movimientos Aprendidos (Máx. 4)</h4>
+        <div className="moves-grid">
+          {movesDetails.map((move, index) => (
+            <div key={move.id} className="move-slot">
+              <div className="move-header">
+                <span className="move-name">{move.name}</span>
+                <span className={`move-type type-${move.type}`}>{move.type}</span>
+              </div>
+              <div className="move-info">
+                <span className="move-power">
+                  {move.power > 0 ? `Poder: ${move.power}` : 'Movimiento de Estado'}
+                </span>
+                <span className="move-accuracy">Precisión: {move.accuracy}%</span>
+                <span className="move-pp">PP: {move.current_pp}/{move.pp}</span>
+              </div>
+              <div className="move-class">
+                Clase: {move.damage_class === 'physical' ? 'Físico' :
+                  move.damage_class === 'special' ? 'Especial' : 'Estado'}
+              </div>
+              <button
+                className="forget-move-btn"
+                onClick={() => handleForgetMove(move.id, move.name)}
+                disabled={forgettingMove || movesDetails.length <= 1}
+              >
+                {forgettingMove ? 'Olvidando...' : 'Olvidar Movimiento'}
+              </button>
+            </div>
+          ))}
+
+          {Array.from({ length: emptySlots }, (_, index) => (
+            <div key={`empty-${index}`} className="move-slot empty-move-slot">
+              <div className="empty-slot-content">
+                <div className="empty-slot-icon">+</div>
+                <p>Espacio Vacío</p>
+                <small>Slot {movesDetails.length + index + 1}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderAvailableMoves = () => {
+    if (!selectedPokemon || !selectedPokemon.available_moves) {
+      return (
+        <div className="no-available-moves">
+          <p>No hay movimientos disponibles para aprender en este nivel.</p>
+        </div>
+      );
+    }
+
+    const availableMoves = selectedPokemon.available_moves || [];
+    const currentMoves = selectedPokemon.moves || [];
+
+    return (
+      <div className="available-moves-section">
+        <h4>Movimientos Disponibles para Aprender</h4>
+        <div className="moves-grid">
+          {availableMoves.map((move) => {
+            const isAlreadyKnown = move.already_known || currentMoves.includes(move.id);
+            const canLearn = selectedPokemon.moves_details && selectedPokemon.moves_details.length < 4;
+
+            return (
+              <div key={move.id} className={`move-slot ${isAlreadyKnown ? 'already-known' : ''}`}>
+                <div className="move-header">
+                  <span className="move-name">{move.name}</span>
+                  <span className={`move-type type-${move.type}`}>{move.type}</span>
+                </div>
+                <div className="move-info">
+                  <span className="move-power">
+                    {move.power > 0 ? `Poder: ${move.power}` : 'Movimiento de Estado'}
+                  </span>
+                  <span className="move-accuracy">Precisión: {move.accuracy}%</span>
+                  <span className="move-pp">PP: {move.pp}</span>
+                  <span className="move-learn-level">Nivel: {move.level_learned}</span>
+                </div>
+                <div className="move-class">
+                  Clase: {move.damage_class === 'physical' ? 'Físico' :
+                    move.damage_class === 'special' ? 'Especial' : 'Estado'}
+                </div>
+                {isAlreadyKnown ? (
+                  <button className="already-known-btn" disabled>
+                    Ya Aprendido
+                  </button>
+                ) : (
+                  <button
+                    className="teach-move-btn"
+                    onClick={() => handleTeachMove(move.id, move.name)}
+                    disabled={teachingMove || !canLearn}
+                  >
+                    {teachingMove ? 'Enseñando...' : 'Aprender Movimiento'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const renderPokemonDetailsModal = () => {
     if (!selectedPokemon) return null;
 
@@ -946,39 +1112,10 @@ const GameScreen = () => {
                 </div>
               )}
 
-              {pokemonDetailTab === 'moves' && selectedPokemon.moves_details && (
+              {pokemonDetailTab === 'moves' && (
                 <div className="moves-tab">
-                  <h3>Movimientos Aprendidos</h3>
-                  <div className="moves-list">
-                    {selectedPokemon.moves_details.map((move) => (
-                      <div key={move.id} className="move-detail">
-                        <div className="move-header">
-                          <span className="move-name">{move.name}</span>
-                          <span className={`move-type type-${move.type}`}>{move.type}</span>
-                        </div>
-                        <div className="move-info">
-                          <span className="move-power">
-                            {move.power > 0 ? `Poder: ${move.power}` : 'Movimiento de Estado'}
-                          </span>
-                          <span className="move-accuracy">Precisión: {move.accuracy}%</span>
-                          <span className="move-pp">PP: {move.current_pp}/{move.pp}</span>
-                        </div>
-                        <div className="move-class">
-                          Clase: {move.damage_class === 'physical' ? 'Físico' :
-                            move.damage_class === 'special' ? 'Especial' : 'Estado'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {pokemonDetailTab === 'moves' && !selectedPokemon.moves_details && (
-                <div className="moves-tab">
-                  <h3>Movimientos Aprendidos</h3>
-                  <div className="no-moves">
-                    <p>No se encontraron movimientos para este Pokémon.</p>
-                  </div>
+                  {renderLearnedMoves()}
+                  {renderAvailableMoves()}
                 </div>
               )}
             </div>
@@ -988,7 +1125,6 @@ const GameScreen = () => {
     );
   };
 
-  // Mapa en tabla 8x8
   const renderKantoMap = () => {
     const mapGrid = [
       // Fila 1
@@ -1117,13 +1253,10 @@ const GameScreen = () => {
           </div>
         </div>
 
-        {/* Sección de Pokémon salvajes */}
         {renderWildPokemons()}
 
-        {/* Servicios de ciudad (solo se muestra en ciudades) */}
         {renderCityServices()}
 
-        {/* Modal de detalles del Pokémon */}
         {renderPokemonDetailsModal()}
       </div>
     </div>

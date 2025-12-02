@@ -1,0 +1,316 @@
+.create-room-container {
+  padding: 2rem;
+  min-height: calc(100vh - 80px);
+  background: linear-gradient(135deg, #1a1a1a, #2c3e50);
+}
+
+.room-waiting {
+  max-width: 800px;
+  margin: 0 auto;
+  background: rgba(44, 62, 80, 0.9);
+  padding: 2rem;
+  border-radius: 15px;
+  border: 3px solid #8e44ad;
+  backdrop-filter: blur(10px);
+}
+
+.room-waiting h2 {
+  color: #f1c40f;
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.room-info-card {
+  background: rgba(52, 73, 94, 0.7);
+  padding: 2rem;
+  border-radius: 10px;
+  border: 2px solid #3498db;
+  margin-bottom: 2rem;
+}
+
+.room-code-section {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.room-code-section h3 {
+  color: #ecf0f1;
+  margin-bottom: 1rem;
+}
+
+.room-code-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.code {
+  background: linear-gradient(135deg, #8e44ad, #9b59b6);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  font-family: monospace;
+  min-width: 120px;
+}
+
+.copy-btn {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.copy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.copy-btn.copied {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+.code-instructions {
+  color: #bdc3c7;
+  font-style: italic;
+  text-align: center;
+}
+
+.room-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.detail-item {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #f39c12;
+}
+
+.detail-item .label {
+  color: #95a5a6;
+  font-size: 0.9rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.detail-item .value {
+  color: #ecf0f1;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.status-waiting {
+  color: #f39c12 !important;
+  font-weight: bold;
+}
+
+.your-team-section h3 {
+  color: #ecf0f1;
+  margin-bottom: 1rem;
+}
+
+.team-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.pokemon-preview {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid #27ae60;
+  text-align: center;
+  min-width: 150px;
+}
+
+.pokemon-preview img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.pokemon-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pokemon-name {
+  color: #ecf0f1;
+  font-weight: 600;
+}
+
+.pokemon-level {
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.pokemon-moves {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #95a5a6;
+}
+
+.waiting-message {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.waiting-animation {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #f39c12;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+.waiting-message p {
+  color: #f39c12;
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.start-btn {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 250px;
+}
+
+.start-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.start-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.back-btn {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.loading-room {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  color: #ecf0f1;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #34495e;
+  border-top: 5px solid #f1c40f;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-room {
+  text-align: center;
+  padding: 3rem;
+  color: #ecf0f1;
+}
+
+.error-room h2 {
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.error-room button {
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .create-room-container {
+    padding: 1rem;
+  }
+  
+  .room-waiting {
+    padding: 1.5rem;
+  }
+  
+  .room-code-display {
+    flex-direction: column;
+  }
+  
+  .team-preview {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .pokemon-preview {
+    width: 100%;
+    max-width: 200px;
+  }
+}

@@ -27,7 +27,6 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Estilos responsivos adicionales */
 @media (max-width: 768px) {
   .loading-spinner {
     width: 40px;
