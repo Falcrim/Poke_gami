@@ -4,7 +4,6 @@ const API_BASE_URL = 'http://localhost:8000/api';
 
 const handleResponse = async (response) => {
   if (!response.ok) {
-    // Si es error 401 (Unauthorized), limpiar el token
     if (response.status === 401) {
       removeToken();
       removeUser();
@@ -17,11 +16,9 @@ const handleResponse = async (response) => {
       const errorData = await response.json();
       errorMessage = errorData.detail || errorData.message || errorMessage;
       
-      // Manejar errores de Django REST Framework
       if (errorData.non_field_errors) {
         errorMessage = errorData.non_field_errors[0];
       } else if (typeof errorData === 'object') {
-        // Para errores de validación de campos
         const firstError = Object.values(errorData)[0];
         if (Array.isArray(firstError)) {
           errorMessage = firstError[0];
@@ -30,7 +27,6 @@ const handleResponse = async (response) => {
         }
       }
     } catch (e) {
-      // Si no se puede parsear la respuesta de error
       errorMessage = `Error ${response.status}: ${response.statusText}`;
     }
     

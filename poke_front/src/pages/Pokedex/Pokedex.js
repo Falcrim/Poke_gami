@@ -22,7 +22,6 @@ const Pokedex = () => {
     fetchPokedex();
   }, []);
 
-  // Calcular estadísticas de la Pokédex
   const calculatePokedexStats = () => {
     const totalPokemon = 151;
     const caught = pokedex.filter(p => p.state === 'caught').length;
@@ -70,7 +69,6 @@ const Pokedex = () => {
       <div className="pokedex-container">
         <h1>Pokédex</h1>
         
-        {/* Header con estadísticas */}
         <div className="pokedex-header">
           <div className="pokedex-stats">
             <div className="stat-item">
@@ -91,7 +89,6 @@ const Pokedex = () => {
             </div>
           </div>
           
-          {/* Barra de progreso */}
           <div className="pokedex-progress">
             <div className="progress-header">
               <span>Progreso: {pokedexStats.caught} / {pokedexStats.total}</span>

@@ -148,7 +148,6 @@
 .type-ghost { background: #705898; }
 .type-dragon { background: #7038F8; }
 
-/* Barras de salud */
 .health-bar {
   margin-bottom: 0.5rem;
 }
@@ -324,7 +323,6 @@
 .type-ghost { background: #705898; }
 .type-dragon { background: #7038F8; }
 
-/* Barras de salud */
 .health-bar {
   margin-bottom: 0.5rem;
 }
@@ -351,7 +349,6 @@
   border-radius: 4px;
 }
 
-/* Barra de experiencia */
 .exp-bar {
   margin-top: 0.5rem;
   width: 100%;
@@ -364,7 +361,6 @@
   margin-bottom: 0.25rem;
 }
 
-/* ESTA ES LA PARTE CRÍTICA QUE FALTA */
 .exp-bar .bar {
   width: 100%;
   height: 8px;
@@ -376,14 +372,14 @@
 
 .exp-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f1c40f, #d68910); /* Amarillo oscuro */
+  background: linear-gradient(90deg, #f1c40f, #d68910); 
   transition: width 0.3s ease;
   border-radius: 4px;
   box-shadow: 0 0 5px rgba(241, 196, 15, 0.5);
 }
 
 .exp-percentage {
-  color: #f1c40f; /* Amarillo */
+  color: #f1c40f; 
   font-size: 0.8rem;
   font-weight: bold;
   margin-top: 0.25rem;
@@ -409,7 +405,6 @@
   color: white;
 }
 
-/* Equipo vacío */
 .empty-team {
   text-align: center;
   padding: 3rem;
@@ -423,7 +418,6 @@
   font-size: 1.2rem;
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -510,7 +504,6 @@
   margin-bottom: 0.5rem;
 }
 
-/* Pestañas del modal */
 .modal-tabs {
   display: flex;
   margin-bottom: 1.5rem;
@@ -541,7 +534,6 @@
   color: #ecf0f1;
 }
 
-/* Contenido de las pestañas */
 .tab-content {
   min-height: 200px;
 }
@@ -553,7 +545,6 @@
   text-align: center;
 }
 
-/* Estadísticas detalladas */
 .stats-grid-detailed {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -580,7 +571,6 @@
   font-size: 1.1rem;
 }
 
-/* Movimientos detallados */
 .moves-list {
   display: flex;
   flex-direction: column;
@@ -637,7 +627,6 @@
   font-weight: 500;
 }
 
-/* Estilos para las barras de salud en el modal */
 .modal-content .health-bar {
   margin-bottom: 1rem;
 }
@@ -663,7 +652,6 @@
   border-radius: 6px;
 }
 
-/* Instrucciones del equipo */
 .team-instructions {
   color: #bdc3c7;
   text-align: center;
@@ -671,7 +659,6 @@
   font-style: italic;
 }
 
-/* Posición del Pokémon */
 .pokemon-position {
   background: #3498db;
   color: white;
@@ -683,7 +670,6 @@
   display: inline-block;
 }
 
-/* Estados de drag and drop */
 .pokemon-card[draggable] {
   cursor: grab;
 }
@@ -698,7 +684,6 @@
   transform: scale(1.02);
 }
 
-/* Espacios vacíos en el equipo */
 .empty-slot {
   display: flex;
   align-items: center;
@@ -792,7 +777,6 @@
     height: 100px;
   }
 }
-/* Barra de experiencia */
 .exp-bar {
   margin-top: 0.5rem;
   width: 100%;
@@ -839,7 +823,6 @@
   color: white;
 }
 
-/* Equipo vacío */
 .empty-team {
   text-align: center;
   padding: 3rem;
@@ -853,7 +836,6 @@
   font-size: 1.2rem;
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -940,7 +922,6 @@
   margin-bottom: 0.5rem;
 }
 
-/* Pestañas del modal */
 .modal-tabs {
   display: flex;
   margin-bottom: 1.5rem;
@@ -971,7 +952,6 @@
   color: #ecf0f1;
 }
 
-/* Contenido de las pestañas */
 .tab-content {
   min-height: 200px;
 }
@@ -983,7 +963,6 @@
   text-align: center;
 }
 
-/* Estadísticas detalladas */
 .stats-grid-detailed {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1010,7 +989,6 @@
   font-size: 1.1rem;
 }
 
-/* Movimientos detallados */
 .moves-list {
   display: flex;
   flex-direction: column;
@@ -1067,7 +1045,6 @@
   font-weight: 500;
 }
 
-/* Estilos para las barras de salud en el modal */
 .modal-content .health-bar {
   margin-bottom: 1rem;
 }
@@ -1092,7 +1069,6 @@
   transition: width 0.3s ease, background-color 0.3s ease;
   border-radius: 6px;
 }
-/* Instrucciones del equipo */
 .team-instructions {
   color: #bdc3c7;
   text-align: center;
@@ -1100,7 +1076,6 @@
   font-style: italic;
 }
 
-/* Posición del Pokémon */
 .pokemon-position {
   background: #3498db;
   color: white;
@@ -1112,7 +1087,6 @@
   display: inline-block;
 }
 
-/* Estados de drag and drop */
 .pokemon-card[draggable] {
   cursor: grab;
 }
@@ -1127,7 +1101,6 @@
   transform: scale(1.02);
 }
 
-/* Espacios vacíos en el equipo */
 .empty-slot {
   display: flex;
   align-items: center;

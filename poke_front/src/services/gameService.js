@@ -1,7 +1,5 @@
-// services/gameService.js - ELIMINA las funciones de combate de aquí
 import { apiRequest } from './api';
 
-// Mantén solo las funciones de juego generales
 export const getStarters = async () => {
   return await apiRequest('/game/pokemons/starters/');
 };
@@ -88,3 +86,16 @@ export const getBag = async () => {
   return await apiRequest('/auth/bag/');
 };
 
+export const teachMove = async (pokemonId, moveId) => {
+  return await apiRequest(`/auth/pokemon-center/${pokemonId}/teach-move/`, {
+    method: 'POST',
+    body: { move_id: moveId },
+  });
+};
+
+export const forgetMove = async (pokemonId, moveId) => {
+  return await apiRequest(`/auth/pokemon-center/${pokemonId}/forget-move/`, {
+    method: 'POST',
+    body: { move_id: moveId },
+  });
+};

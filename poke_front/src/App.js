@@ -9,8 +9,7 @@ import Pokedex from './pages/Pokedex/Pokedex';
 import Profile from './pages/Profile/Profile';
 import Ranking from './pages/Ranking/Ranking';
 import GameScreen from './pages/GameScreen/GameScreen';
-// Importa BattleScreen desde components
-import BattleScreen from './components/battle/BattleScreen'; // AÑADIR ESTA LÍNEA
+import BattleScreen from './components/battle/BattleScreen';
 import { getToken, getUser, setUser, removeToken, removeUser } from './utils/auth';
 import { getCurrentUser } from './services/authService';
 import './App.css';
@@ -38,7 +37,6 @@ function App() {
           setUserState(currentUser);
           setIsAuthenticated(true);
           
-          // Verificar si necesita seleccionar starter
           if (!currentUser.player_info?.starter_chosen) {
             setShouldSelectStarter(true);
           }
@@ -65,7 +63,6 @@ function App() {
   const handleLogin = (userData) => {
     setIsAuthenticated(true);
     setUserState(userData);
-    // Si el usuario acaba de registrarse, forzar selección de starter
     if (!userData.player_info?.starter_chosen) {
       setShouldSelectStarter(true);
     }

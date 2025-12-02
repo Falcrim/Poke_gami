@@ -27,29 +27,23 @@ const Dashboard = ({ user }) => {
     fetchTeam();
   }, []);
 
-  // Nueva función para calcular el porcentaje de experiencia usando experience_info
   const calculateExpPercentage = (pokemon) => {
     if (pokemon.experience_info) {
-      // Usar directamente progress_percentage del API
       return pokemon.experience_info.progress_percentage;
     }
 
-    // Fallback por si no viene experience_info (mantener compatibilidad)
     const currentLevelExp = (pokemon.level - 1) * 100;
     const nextLevelExp = pokemon.level * 100;
     const progress = ((pokemon.experience - currentLevelExp) / (nextLevelExp - currentLevelExp)) * 100;
     return Math.min(Math.max(progress, 0), 100);
   };
 
-  // Función para obtener el texto de experiencia para mostrar
-  // Reemplazar la función actual por esta versión
   const getExpText = (pokemon) => {
     if (pokemon.experience_info) {
       const expInfo = pokemon.experience_info;
       return `${expInfo.exp_in_current_level}/${expInfo.exp_needed_for_next_level}`;
     }
 
-    // Fallback
     const currentLevelExp = (pokemon.level - 1) * 100;
     return `${pokemon.experience - currentLevelExp}/100`;
   };
@@ -66,7 +60,6 @@ const Dashboard = ({ user }) => {
     }
   };
 
-  // Funciones para drag and drop
   const handleDragStart = (e, pokemonId) => {
     e.dataTransfer.setData('pokemonId', pokemonId.toString());
     e.currentTarget.style.opacity = '0.4';
@@ -95,7 +88,6 @@ const Dashboard = ({ user }) => {
     try {
       const response = await movePokemonToPosition(parseInt(pokemonId), targetPosition);
 
-      // Actualizar el equipo localmente
       const updatedTeam = [...teamData.team];
       const movedPokemonIndex = updatedTeam.findIndex(p => p.id === parseInt(pokemonId));
 
@@ -103,7 +95,6 @@ const Dashboard = ({ user }) => {
         const [movedPokemon] = updatedTeam.splice(movedPokemonIndex, 1);
         updatedTeam.splice(targetPosition, 0, movedPokemon);
 
-        // Actualizar el orden en cada Pokémon
         const reorderedTeam = updatedTeam.map((pokemon, index) => ({
           ...pokemon,
           order: index
@@ -230,7 +221,6 @@ const Dashboard = ({ user }) => {
                 </div>
               ))}
 
-              {/* Espacios vacíos en el equipo */}
               {Array.from({ length: max_team_size - team_count }, (_, index) => (
                 <div key={`empty-${index}`} className="pokemon-card empty-slot">
                   <div className="empty-slot-content">
@@ -244,7 +234,6 @@ const Dashboard = ({ user }) => {
           )}
         </div>
 
-        {/* Modal de detalles del Pokémon */}
         {selectedPokemon && (
           <div className="modal-overlay" onClick={closePokemonDetails}>
             <div className="pokemon-modal" onClick={(e) => e.stopPropagation()}>
@@ -277,7 +266,6 @@ const Dashboard = ({ user }) => {
                         ></div>
                       </div>
                     </div>
-                    {/* Información de experiencia en el modal */}
                     <div className="exp-bar">
                       <span>EXP: {getExpText(selectedPokemon)}</span>
                       <div className="bar">
