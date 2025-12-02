@@ -7,3 +7,4 @@ from .PokemonCenterViewset import PokemonCenterViewSet
 from .BagItemsViewSet import BagItemsViewSet
 from .TeamOrderViewSet import TeamOrderViewSet
 from .BattleViewSet import BattleViewSet
+from .PvPBattleViewSet import PvPBattleViewSet

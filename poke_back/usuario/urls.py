@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from .api import PokemonCenterViewSet, BagItemsViewSet, TeamOrderViewSet, BattleViewSet
+from .api import PokemonCenterViewSet, BagItemsViewSet, TeamOrderViewSet, BattleViewSet, PvPBattleViewSet
 from .api.PlayerPokemonViewSet import PlayerPokemonViewSet
 from .api.PokedexViewSet import PokedexViewSet
 from .api.UserViewSet import UserViewSet
@@ -18,6 +18,7 @@ router.register(r'player-pokemons', PlayerPokemonViewSet, basename='playerpokemo
 router.register(r'pokemon-center', PokemonCenterViewSet, basename='pokemoncenter')
 router.register(r'team-order', TeamOrderViewSet, basename='teamorder')
 router.register(r'battles', BattleViewSet, basename='battle')
+router.register(r'pvp-battles', PvPBattleViewSet, basename='pvp-battle')
 
 
 urlpatterns = [
