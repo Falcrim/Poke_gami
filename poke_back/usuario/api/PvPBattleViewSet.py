@@ -1,10 +1,10 @@
-# usuario/api/PvPBattleViewSet.py
 from rest_framework import viewsets, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 import random
 import string
 from django.db import transaction
+from usuario.models import Bag
 from django.utils import timezone
 from django.db.models import Q
 from usuario.models.Battle import Battle
@@ -218,6 +218,27 @@ class PvPBattleViewSet(viewsets.ViewSet):
         player = request.user.player_profile
         battle_format = request.data.get('battle_format', '1vs1')
 
+        existing_battle = Battle.objects.filter(
+            Q(battle_type='pvp'),
+            Q(state__in=['waiting', 'active']),
+            Q(player1=player) | Q(player2=player)
+        ).first()
+
+        if existing_battle:
+            if existing_battle.state == 'waiting':
+                return Response({
+                    'error': 'Ya tienes una sala en espera. Cierra la sala actual antes de crear una nueva.',
+                    'room_code': existing_battle.room_code,
+                    'battle_id': existing_battle.id
+                }, status=400)
+            elif existing_battle.state == 'active':
+                return Response({
+                    'error': 'Ya estás en una batalla activa. Termina la batalla actual antes de crear una nueva sala.',
+                    'battle_id': existing_battle.id
+                }, status=400)
+
+        battle_format = request.data.get('battle_format', '1vs1')
+
         if battle_format not in ['1vs1', '2vs2']:
             return Response({'error': 'Formato de batalla no válido'}, status=400)
 
@@ -256,6 +277,35 @@ class PvPBattleViewSet(viewsets.ViewSet):
             'your_team': scaled_team
         })
 
+    @action(detail=False, methods=['post'])
+    def close_room(self, request):
+        player = request.user.player_profile
+        room_code = request.data.get('room_code')
+
+        if not room_code:
+            return Response({'error': 'Se requiere room_code'}, status=400)
+
+        try:
+            battle = Battle.objects.get(
+                room_code=room_code,
+                battle_type='pvp',
+                state='waiting',
+                player1=player,
+                player2__isnull=True
+            )
+        except Battle.DoesNotExist:
+            return Response({
+                'error': 'Sala no encontrada, ya ha iniciado o no tienes permiso para cerrarla'
+            }, status=404)
+
+        with transaction.atomic():
+            battle.delete()
+
+        return Response({
+            'message': 'Sala cerrada exitosamente',
+            'room_code': room_code
+        })
+
     @action(detail=False, methods=['get'])
     def available_rooms(self, request):
         rooms = Battle.objects.filter(
@@ -276,6 +326,25 @@ class PvPBattleViewSet(viewsets.ViewSet):
         player = request.user.player_profile
         room_code = request.data.get('room_code')
         password = request.data.get('password')
+
+        existing_battle = Battle.objects.filter(
+            Q(battle_type='pvp'),
+            Q(state__in=['waiting', 'active']),
+            Q(player1=player) | Q(player2=player)
+        ).first()
+
+        if existing_battle:
+            if existing_battle.state == 'waiting':
+                return Response({
+                    'error': 'Ya tienes una sala en espera. Debes cerrarla antes de unirte a otra.',
+                    'room_code': existing_battle.room_code,
+                    'battle_id': existing_battle.id
+                }, status=400)
+            elif existing_battle.state == 'active':
+                return Response({
+                    'error': 'Ya estás en una batalla activa.',
+                    'battle_id': existing_battle.id
+                }, status=400)
 
         if not room_code:
             return Response({'error': 'Se requiere room_code'}, status=400)
@@ -593,7 +662,7 @@ class PvPBattleViewSet(viewsets.ViewSet):
             'battle_format': battle.battle_format,
             'state': battle.state,
             'your_turn': battle.is_player_turn(player) if hasattr(battle, 'is_player_turn') else (
-                        battle.current_turn == player),
+                    battle.current_turn == player),
             'current_turn_username': current_turn_username,
             'your_team': battle.player1_team if is_player1 else battle.player2_team,
             'opponent_team': battle.player2_team if is_player1 else battle.player1_team,
