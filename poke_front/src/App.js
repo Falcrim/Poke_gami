@@ -10,6 +10,9 @@ import Profile from './pages/Profile/Profile';
 import Ranking from './pages/Ranking/Ranking';
 import GameScreen from './pages/GameScreen/GameScreen';
 import BattleScreen from './components/battle/BattleScreen';
+import CreateRoomPage from './pages/PVP/CreateRoomPage';
+import ViewRoomsPage from './pages/PVP/ViewRoomsPage';
+import PvPBattleScreen from './components/battle/PvPBattleScreen';
 import { getToken, getUser, setUser, removeToken, removeUser } from './utils/auth';
 import { getCurrentUser } from './services/authService';
 import './App.css';
@@ -179,6 +182,37 @@ function App() {
             element={
               isAuthenticated && !shouldSelectStarter ?
                 <BattleScreen /> :
+                isAuthenticated ? 
+                  <Navigate to="/starter-selection" replace /> :
+                  <Navigate to="/login" replace />
+            }
+          />
+          {/* Nuevas rutas de multijugador */}
+          <Route
+            path="/create-room"
+            element={
+              isAuthenticated && !shouldSelectStarter ?
+                <CreateRoomPage /> :
+                isAuthenticated ? 
+                  <Navigate to="/starter-selection" replace /> :
+                  <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/view-rooms"
+            element={
+              isAuthenticated && !shouldSelectStarter ?
+                <ViewRoomsPage /> :
+                isAuthenticated ? 
+                  <Navigate to="/starter-selection" replace /> :
+                  <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/pvp-battle/:battleId"
+            element={
+              isAuthenticated && !shouldSelectStarter ?
+                <PvPBattleScreen /> :
                 isAuthenticated ? 
                   <Navigate to="/starter-selection" replace /> :
                   <Navigate to="/login" replace />
