@@ -242,27 +242,33 @@
   background: linear-gradient(135deg, rgba(44, 62, 80, 0.95), rgba(52, 73, 94, 0.95));
   border: 4px solid #1a1a1a;
   border-radius: 10px;
-  padding: 15px;
+   padding: 5px 5px 20px 15px;
   color: white;
   box-shadow: 5px 5px 15px rgba(0,0,0,0.6);
   backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .action-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr); 
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+}
+
+.action-row {
+  display: flex;
   gap: 8px;
   width: 100%;
 }
 
-.action-row {
-  display: contents;
+.action-row:first-child {
+  margin-bottom: 8px;
 }
 
 .action-button {
+  flex: 1; 
   padding: 10px;
   font-size: 11px;
   font-family: 'Pokemon GB', 'Courier New', monospace;
@@ -278,6 +284,9 @@
   letter-spacing: 1.5px;
   box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
   height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-button:hover:not(:disabled) {
@@ -327,6 +336,10 @@
 .action-button.run:hover:not(:disabled) {
   background: linear-gradient(135deg, #f7dc6f, #f1c40f);
 }
+.action-button:nth-child(1) { grid-row: 1; grid-column: 1; } 
+.action-button:nth-child(2) { grid-row: 1; grid-column: 2; } 
+.action-button:nth-child(3) { grid-row: 2; grid-column: 1; } 
+.action-button:nth-child(4) { grid-row: 2; grid-column: 2; } 
 
 .enemy-sprite.shaking,
 .player-sprite.shaking {
