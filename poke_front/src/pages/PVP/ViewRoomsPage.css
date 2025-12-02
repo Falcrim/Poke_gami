@@ -434,3 +434,50 @@
     flex-direction: column;
   }
 }
+.active-room-notice {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  border: 2px solid #d35400;
+  border-radius: 8px;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  color: white;
+  animation: pulseNotice 2s infinite;
+}
+
+@keyframes pulseNotice {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.notice-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notice-icon {
+  font-size: 20px;
+}
+
+.notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notice-text strong {
+  font-size: 14px;
+}
+
+.notice-text span {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.resume-btn {
+  background: linear-gradient(135deg, #f39c12, #d68910) !important;
+}
+
+.resume-btn:hover {
+  background: linear-gradient(135deg, #f7dc6f, #f1c40f) !important;
+}

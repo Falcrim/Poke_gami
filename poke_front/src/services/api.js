@@ -12,26 +12,47 @@ const handleResponse = async (response) => {
     }
     
     let errorMessage = 'Error en la petición';
+    let errorData = {};
+    
     try {
-      const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.message || errorMessage;
+      const text = await response.text();
+      console.log('Error response text:', text);
       
-      if (errorData.non_field_errors) {
-        errorMessage = errorData.non_field_errors[0];
-      } else if (typeof errorData === 'object') {
-        const firstError = Object.values(errorData)[0];
-        if (Array.isArray(firstError)) {
-          errorMessage = firstError[0];
-        } else if (typeof firstError === 'string') {
-          errorMessage = firstError;
+      if (text) {
+        errorData = JSON.parse(text);
+        
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors[0];
+        } else if (typeof errorData === 'object') {
+          const firstError = Object.values(errorData)[0];
+          if (Array.isArray(firstError)) {
+            errorMessage = firstError[0];
+          } else if (typeof firstError === 'string') {
+            errorMessage = firstError;
+          }
         }
+        
+        if (errorData.room_code) {
+          errorMessage += ` | Sala: ${errorData.room_code} | ID: ${errorData.battle_id}`;
+        }
+      } else {
+        errorMessage = `Error ${response.status}: ${response.statusText}`;
       }
     } catch (e) {
       errorMessage = `Error ${response.status}: ${response.statusText}`;
     }
     
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage);
+    error.data = errorData;
+    throw error;
   }
+  
   return response.json();
 };
 

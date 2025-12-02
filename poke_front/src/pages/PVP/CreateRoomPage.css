@@ -2,6 +2,7 @@
   padding: 2rem;
   min-height: calc(100vh - 80px);
   background: linear-gradient(135deg, #1a1a1a, #2c3e50);
+  color: #ecf0f1;
 }
 
 .room-waiting {
@@ -12,6 +13,7 @@
   border-radius: 15px;
   border: 3px solid #8e44ad;
   backdrop-filter: blur(10px);
+  color: #ecf0f1;
 }
 
 .room-waiting h2 {
@@ -27,6 +29,7 @@
   border-radius: 10px;
   border: 2px solid #3498db;
   margin-bottom: 2rem;
+  color: #ecf0f1;
 }
 
 .room-code-section {
@@ -57,6 +60,7 @@
   letter-spacing: 2px;
   font-family: monospace;
   min-width: 120px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .copy-btn {
@@ -68,6 +72,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .copy-btn:hover {
@@ -97,6 +102,7 @@
   padding: 1rem;
   border-radius: 8px;
   border-left: 4px solid #f39c12;
+  color: #ecf0f1;
 }
 
 .detail-item .label {
@@ -136,6 +142,7 @@
   border: 2px solid #27ae60;
   text-align: center;
   min-width: 150px;
+  color: #ecf0f1;
 }
 
 .pokemon-preview img {
@@ -143,6 +150,9 @@
   height: 80px;
   object-fit: contain;
   margin-bottom: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 5px;
 }
 
 .pokemon-info {
@@ -171,6 +181,7 @@
 .waiting-message {
   text-align: center;
   margin: 2rem 0;
+  color: #ecf0f1;
 }
 
 .waiting-animation {
@@ -314,3 +325,37 @@
     max-width: 200px;
   }
 }
+
+.close-btn {
+  padding: 12px 25px;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.close-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  transform: translateY(-2px);
+}
+
+.close-btn:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.action-buttons button {
+  width: 100%;
+}
+

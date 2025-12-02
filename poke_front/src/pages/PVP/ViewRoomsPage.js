@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAvailableRooms, joinRoom } from '../../services/pvpService';
+import { getAvailableRooms, joinRoom, createRoom } from '../../services/pvpService';
 import './ViewRoomsPage.css';
 
 const ViewRoomsPage = () => {
@@ -11,20 +11,17 @@ const ViewRoomsPage = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [roomCode, setRoomCode] = useState('');
   const [joining, setJoining] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const roomCodeInputRef = useRef(null);
   
-  // Usar useRef para el intervalo (mejor práctica)
   const refreshIntervalRef = useRef(null);
   const lastFetchTimeRef = useRef(0);
-  const fetchCooldown = 5000; // 5 segundos entre peticiones
+  const fetchCooldown = 5000;
 
-  // Función optimizada para fetchRooms
   const fetchRooms = useCallback(async () => {
-    // Evitar múltiples peticiones simultáneas
     if (isFetching) return;
     
-    // Cooldown para evitar peticiones demasiado frecuentes
     const now = Date.now();
     if (now - lastFetchTimeRef.current < fetchCooldown) {
       return;
@@ -38,7 +35,6 @@ const ViewRoomsPage = () => {
       setRooms(response.rooms || []);
       setError('');
     } catch (err) {
-      // Solo mostrar error si no es un error de red
       if (!err.message.includes('Failed to fetch')) {
         setError('Error al cargar salas disponibles');
       }
@@ -49,35 +45,27 @@ const ViewRoomsPage = () => {
     }
   }, [isFetching]);
 
-  // Efecto para inicializar y manejar polling
   useEffect(() => {
-    // Fetch inicial
     fetchRooms();
     
-    // Configurar actualización automática cada 30 segundos (en lugar de 10)
     refreshIntervalRef.current = setInterval(fetchRooms, 30000);
     
-    // Función para manejar visibilidad de pestaña
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Pausar polling cuando la pestaña no está activa
         if (refreshIntervalRef.current) {
           clearInterval(refreshIntervalRef.current);
           refreshIntervalRef.current = null;
         }
       } else {
-        // Reanudar polling cuando la pestaña vuelve a estar activa
         if (!refreshIntervalRef.current) {
-          fetchRooms(); // Fetch inmediato al volver
+          fetchRooms();
           refreshIntervalRef.current = setInterval(fetchRooms, 30000);
         }
       }
     };
     
-    // Escuchar cambios de visibilidad
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Cleanup
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
@@ -86,10 +74,9 @@ const ViewRoomsPage = () => {
     };
   }, [fetchRooms]);
 
-  // Función para refresh manual con cooldown
   const handleRefresh = useCallback(() => {
     const now = Date.now();
-    if (now - lastFetchTimeRef.current < 2000) { // 2 segundos cooldown para refresh manual
+    if (now - lastFetchTimeRef.current < 2000) {
       return;
     }
     
@@ -97,22 +84,12 @@ const ViewRoomsPage = () => {
     fetchRooms();
   }, [fetchRooms]);
 
-  const handleJoinClick = () => {
-    setShowJoinModal(true);
-    setTimeout(() => {
-      if (roomCodeInputRef.current) {
-        roomCodeInputRef.current.focus();
-      }
-    }, 100);
-  };
-
   const handleJoinRoom = async () => {
     if (!roomCode.trim()) {
       setError('Por favor ingresa un código de sala');
       return;
     }
 
-    // Validar formato del código (6 caracteres alfanuméricos)
     const codeRegex = /^[A-Z0-9]{6}$/;
     if (!codeRegex.test(roomCode.toUpperCase())) {
       setError('El código debe tener exactamente 6 caracteres alfanuméricos');
@@ -126,7 +103,6 @@ const ViewRoomsPage = () => {
       const response = await joinRoom(roomCode.toUpperCase());
       
       if (response.battle_id) {
-        // Detener polling antes de navegar
         if (refreshIntervalRef.current) {
           clearInterval(refreshIntervalRef.current);
           refreshIntervalRef.current = null;
@@ -142,28 +118,47 @@ const ViewRoomsPage = () => {
   };
 
   const handleBack = () => {
-    // Limpiar intervalo antes de navegar
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
     }
     navigate('/dashboard');
   };
 
-  const handleCreateRoom = () => {
-    // Limpiar intervalo antes de navegar
-    if (refreshIntervalRef.current) {
-      clearInterval(refreshIntervalRef.current);
+  const handleCreateRoom = async () => {
+    if (creating) return;
+    
+    try {
+      setCreating(true);
+      setError('');
+      
+      const response = await createRoom();
+      
+      if (response.battle_id) {
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+          refreshIntervalRef.current = null;
+        }
+        navigate(`/pvp-battle/${response.battle_id}`);
+      }
+    } catch (err) {
+      console.log('Full error:', err);
+      console.log('Error data:', err.data);
+      
+      if (err.data && err.data.room_code) {
+        navigate(`/create-room?resume=${err.data.room_code}`);
+      } else {
+        setError(err.message || 'Error al crear sala');
+      }
+    } finally {
+      setCreating(false);
     }
-    navigate('/create-room');
   };
 
-  // Función para unirse a una sala específica desde la tarjeta
   const handleJoinSpecificRoom = (roomCodeFromCard) => {
     setRoomCode(roomCodeFromCard);
     handleJoinRoom();
   };
 
-  // Renderizar tarjetas de sala optimizadas
   const renderRoomCards = () => {
     if (!rooms || rooms.length === 0) {
       return (
@@ -171,8 +166,12 @@ const ViewRoomsPage = () => {
           <div className="no-rooms-icon">🏠</div>
           <h3>No hay salas disponibles</h3>
           <p>Crea una nueva sala o espera a que alguien cree una</p>
-          <button className="create-room-btn" onClick={handleCreateRoom}>
-            Crear mi propia sala
+          <button 
+            className="create-room-btn" 
+            onClick={handleCreateRoom}
+            disabled={creating}
+          >
+            {creating ? 'Creando...' : 'Crear mi propia sala'}
           </button>
         </div>
       );
@@ -255,8 +254,12 @@ const ViewRoomsPage = () => {
           >
             {isFetching ? '🔄 Actualizando...' : '🔄 Actualizar'}
           </button>
-          <button className="create-room-btn" onClick={handleCreateRoom}>
-            ➕ Crear Nueva Sala
+          <button 
+            className="create-room-btn"
+            onClick={handleCreateRoom}
+            disabled={creating}
+          >
+            {creating ? 'Creando...' : '➕ Crear Nueva Sala'}
           </button>
         </div>
       </div>
@@ -309,7 +312,6 @@ const ViewRoomsPage = () => {
         ← Volver al Dashboard
       </button>
 
-      {/* Modal de unirse */}
       {showJoinModal && (
         <div className="modal-overlay" onClick={() => setShowJoinModal(false)}>
           <div className="join-modal" onClick={(e) => e.stopPropagation()}>

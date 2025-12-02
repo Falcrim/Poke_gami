@@ -34,11 +34,15 @@ export const pvpSurrender = async (battleId) => {
   });
 };
 
-export const leaveRoom = async (roomCode) => {
-  return await apiRequest('/auth/pvp-battles/leave_room/', {
+export const closeRoom = async (roomCode) => {
+  return await apiRequest('/auth/pvp-battles/close_room/', {
     method: 'POST',
     body: { room_code: roomCode },
   });
+};
+
+export const getMyActiveRoom = async () => {
+  return await apiRequest('/auth/pvp-battles/my_active_room/');
 };
 
 export const getPvPStats = async () => {
