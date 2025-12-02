@@ -392,7 +392,25 @@ const GameScreen = () => {
     }
 
     return (
+
       <div className="wild-pokemons-section">
+
+        <div className="battle-options">
+          <button
+            className="battle-btn wild-pokemon-btn"
+            onClick={() => navigate('/battle/wild')}
+          >
+            Buscar Pokémon Salvaje
+          </button>
+
+          <button
+            className="battle-btn trainer-btn"
+            onClick={() => navigate('/battle/trainer')}
+          >
+            Buscar Entrenador Pokémon
+          </button>
+        </div>
+
         <h3>Pokémon Salvajes en {currentLocation.name}</h3>
         <div className="pokemon-grid">
           {currentLocation.wild_pokemons.map((wildPokemon) => {

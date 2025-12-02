@@ -30,9 +30,10 @@ const Dashboard = ({ user }) => {
   // Nueva función para calcular el porcentaje de experiencia usando experience_info
   const calculateExpPercentage = (pokemon) => {
     if (pokemon.experience_info) {
+      // Usar directamente progress_percentage del API
       return pokemon.experience_info.progress_percentage;
     }
-    
+
     // Fallback por si no viene experience_info (mantener compatibilidad)
     const currentLevelExp = (pokemon.level - 1) * 100;
     const nextLevelExp = pokemon.level * 100;
@@ -41,12 +42,13 @@ const Dashboard = ({ user }) => {
   };
 
   // Función para obtener el texto de experiencia para mostrar
+  // Reemplazar la función actual por esta versión
   const getExpText = (pokemon) => {
     if (pokemon.experience_info) {
       const expInfo = pokemon.experience_info;
       return `${expInfo.exp_in_current_level}/${expInfo.exp_needed_for_next_level}`;
     }
-    
+
     // Fallback
     const currentLevelExp = (pokemon.level - 1) * 100;
     return `${pokemon.experience - currentLevelExp}/100`;
@@ -265,7 +267,7 @@ const Dashboard = ({ user }) => {
                     </div>
                     <div className="health-bar">
                       <span>HP: {selectedPokemon.current_hp}/{selectedPokemon.hp}</span>
-                      <div className="bar">
+                      <div className="bar" style={{ height: '12px', borderRadius: '6px' }}>
                         <div
                           className="health-fill"
                           style={{

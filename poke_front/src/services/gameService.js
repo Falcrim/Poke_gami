@@ -1,5 +1,7 @@
+// services/gameService.js - ELIMINA las funciones de combate de aquí
 import { apiRequest } from './api';
 
+// Mantén solo las funciones de juego generales
 export const getStarters = async () => {
   return await apiRequest('/game/pokemons/starters/');
 };
@@ -30,6 +32,7 @@ export const movePokemonToPosition = async (pokemonId, position) => {
     body: { position },
   });
 };
+
 export const getLocations = async () => {
   return await apiRequest('/game/locations/');
 };
@@ -84,3 +87,4 @@ export const getCurrentUser = async () => {
 export const getBag = async () => {
   return await apiRequest('/auth/bag/');
 };
+

@@ -8,7 +8,9 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import Pokedex from './pages/Pokedex/Pokedex';
 import Profile from './pages/Profile/Profile';
 import Ranking from './pages/Ranking/Ranking';
-import GameScreen from './pages/GameScreen/GameScreen'; // Importa el componente GameScreen
+import GameScreen from './pages/GameScreen/GameScreen';
+// Importa BattleScreen desde components
+import BattleScreen from './components/battle/BattleScreen'; // AÑADIR ESTA LÍNEA
 import { getToken, getUser, setUser, removeToken, removeUser } from './utils/auth';
 import { getCurrentUser } from './services/authService';
 import './App.css';
@@ -170,6 +172,16 @@ function App() {
             element={
               isAuthenticated && !shouldSelectStarter ?
                 <GameScreen /> :
+                isAuthenticated ? 
+                  <Navigate to="/starter-selection" replace /> :
+                  <Navigate to="/login" replace />
+            }
+          />
+          <Route
+            path="/battle/:battleType"
+            element={
+              isAuthenticated && !shouldSelectStarter ?
+                <BattleScreen /> :
                 isAuthenticated ? 
                   <Navigate to="/starter-selection" replace /> :
                   <Navigate to="/login" replace />
