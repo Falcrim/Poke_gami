@@ -123,6 +123,13 @@ class PlayerPokemon(models.Model):
         if self.just_evolved:
             self.current_hp = self.hp
             print(f"¡{self.pokemon.name} evolucionó!")
+            
+            from usuario.models.Pokedex import Pokedex
+            Pokedex.objects.get_or_create(
+                player=self.player,
+                pokemon=self.pokemon,
+                defaults={'state': 'caught'}
+            )
 
     def full_heal(self):
         """Cura completamente al Pokémon sin reordenar"""
@@ -159,6 +166,18 @@ class PlayerPokemon(models.Model):
             move_id_str = str(move.id)
             if move_id_str not in self.moves_pp:
                 self.moves_pp[move_id_str] = move.pp
+
+        from usuario.models.Pokedex import Pokedex
+        pokedex_entry, created = Pokedex.objects.get_or_create(
+            player=self.player,
+            pokemon=new_pokemon,
+            defaults={'state': 'caught'}
+        )
+
+        # Si ya existe pero no está como capturado, actualizar
+        if not created and pokedex_entry.state != 'caught':
+            pokedex_entry.state = 'caught'
+            pokedex_entry.save()
 
     def get_experience_info(self):
         """Obtiene información detallada sobre la experiencia para la barra de progreso"""
